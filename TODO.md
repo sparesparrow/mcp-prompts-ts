@@ -11,7 +11,7 @@
 ### Fáze 2: Aktualizace Dependencies
 - [ ] Nahradit lokální workspace dependencies s versioned NPM balíčky
 - [ ] Přidat `@sparesparrow/mcp-prompts-contracts` jako dependency
-- [ ] Přidat `@sparesparrow/mcp-prompts-collection` jako dependency
+- [ ] Přidat `@sparesparrow/mcp-prompts-catalog` jako dependency
 - [ ] Aktualizovat importy v kódu
 
 ### Fáze 3: Opravy a Stabilizace
