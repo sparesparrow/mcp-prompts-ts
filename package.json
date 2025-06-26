@@ -14,11 +14,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/sparesparrow/mcp-prompts-ts.git"
+    "url": "https://github.com/sparesparrow/mcp-prompts.git"
   },
-  "homepage": "https://github.com/sparesparrow/mcp-prompts-ts#readme",
+  "homepage": "https://github.com/sparesparrow/mcp-prompts#readme",
   "bugs": {
-    "url": "https://github.com/sparesparrow/mcp-prompts-ts/issues"
+    "url": "https://github.com/sparesparrow/mcp-prompts/issues"
   },
   "scripts": {
     "test": "npm run test:unit && npm run test:integration",
@@ -59,8 +59,8 @@
     "@elastic/elasticsearch": "^9.0.2",
     "@modelcontextprotocol/sdk": "^1.13.0",
     "@modelcontextprotocol/server-postgres": "0.6.2",
-    "@sparesparrow/mcp-prompts-contracts": "^0.1.0",
-    "@sparesparrow/mcp-prompts-catalog": "^0.1.0",
+    "@sparesparrow/mcp-prompts-contracts": "file:../mcp-prompts-contracts",
+    "@sparesparrow/mcp-prompts-collection": "file:../mcp-prompts-collection/catalog",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "axios": "^1.10.0",
@@ -121,5 +121,9 @@
     "ts-node": "^10.9.2",
     "typedoc": "^0.28.5",
     "typescript": "^5.4.5"
-  }
+  },
+  "workspaces": [
+    "packages/mcp-prompts-catalog",
+    "packages/mcp-prompts-contracts"
+  ]
 }
