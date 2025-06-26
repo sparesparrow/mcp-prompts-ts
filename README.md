@@ -1,3 +1,10 @@
 # MCP Prompts - TypeScript Implementation
 
-This repository will contain the TypeScript implementation of the MCP Prompts server.
+Tento repozitář obsahuje referenční TypeScript implementaci MCP Prompts serveru.
+
+**Všechny typy a Zod schémata importujte pouze z balíčku [`@sparesparrow/mcp-prompts-contracts`](../mcp-prompts-contracts).**
+
+Příklad:
+```ts
+import { Prompt, promptSchemas } from '@sparesparrow/mcp-prompts-contracts';
+```
