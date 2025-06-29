@@ -9,10 +9,10 @@
 - [x] Vyčistit package.json od nepotřebných závislostí
 
 ### Fáze 2: Aktualizace Dependencies
-- [ ] Nahradit lokální workspace dependencies s versioned NPM balíčky
-- [ ] Přidat `@sparesparrow/mcp-prompts-contracts` jako dependency
-- [ ] Přidat `@sparesparrow/mcp-prompts-catalog` jako dependency
-- [ ] Aktualizovat importy v kódu
+- [x] Nahradit lokální workspace dependencies s versioned NPM balíčky
+- [x] Přidat `@sparesparrow/mcp-prompts-contracts` jako dependency
+- [x] Přidat `@sparesparrow/mcp-prompts-catalog` jako dependency
+- [x] Aktualizovat importy v kódu
 
 ### Fáze 3: Opravy a Stabilizace
 - [ ] Opravit HTTP Server error handling unit testy
