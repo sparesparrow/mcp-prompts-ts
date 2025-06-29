@@ -30,7 +30,7 @@
 - [x] Nastavit GitHub Actions pro testy a build
 - [x] Konfigurovat Docker image building a publishing
 - [x] Nastavit automatické NPM package publishing
-- [ ] Přidat repository_dispatch event na meta-repo
+- [x] Přidat repository_dispatch event na meta-repo
 
 ### Fáze 6: Dokumentace
 - [ ] Aktualizovat API dokumentaci
