@@ -21,7 +21,7 @@
     "url": "https://github.com/sparesparrow/mcp-prompts/issues"
   },
   "scripts": {
-    // "test": "npm run test:unit && npm run test:integration",
+    "test": "bash scripts/run-tests.sh",
     "lint": "eslint \"src/**/*.ts\" && prettier --check .",
     "validate:prompts": "ts-node src/scripts/validate-prompts.ts",
     "build": "node build.mjs",
@@ -121,9 +121,5 @@
     "ts-node": "^10.9.2",
     "typedoc": "^0.28.5",
     "typescript": "^5.4.5"
-  },
-  "workspaces": [
-    "packages/mcp-prompts-catalog",
-    "packages/mcp-prompts-contracts"
-  ]
+  }
 }

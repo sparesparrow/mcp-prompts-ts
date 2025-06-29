@@ -6,7 +6,7 @@
 - [x] Odstranit ne-TypeScript kód (android_app/)
 - [x] Odstranit adresáře extrahované v Phase 1 (prompts/, packages/)
 - [x] Aktualizovat závislosti na versioned NPM balíčky
-- [ ] Vyčistit package.json od nepotřebných závislostí
+- [x] Vyčistit package.json od nepotřebných závislostí
 
 ### Fáze 2: Aktualizace Dependencies
 - [ ] Nahradit lokální workspace dependencies s versioned NPM balíčky
