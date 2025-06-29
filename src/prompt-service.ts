@@ -9,20 +9,14 @@ import { promptSchemas } from '@sparesparrow/mcp-prompts-contracts/dist/schemas'
 import type {
   CreatePromptParams,
   ListPromptsOptions,
-  Prompt,
-  StorageAdapter,
   TemplateVariable,
   UpdatePromptParams,
   TemplateFormatOptions,
 } from './interfaces.js';
-import type { ApplyTemplateResult } from './interfaces.js';
 import * as Prompts from './prompts.js';
-import { promptSchemas } from './schemas.js';
-import { DuplicateError, AppError, HttpErrorCode } from './errors.js';
-import { getRedisClient, jsonFriendlyErrorReplacer } from './utils.js';
+import { DuplicateError, AppError, HttpErrorCode, ValidationError, NotFoundError } from './errors.js';
+import { getRedisClient, jsonFriendlyErrorReplacer, templateHelpers } from './utils.js';
 import { config } from './config.js';
-import { templateHelpers } from './utils.js';
-import { ValidationError, NotFoundError } from './errors.js';
 
 function validateTemplateVariables(prompt: Pick<Prompt, 'content' | 'isTemplate' | 'variables'>) {
   if (!prompt.isTemplate) {
