@@ -29,7 +29,7 @@
 ### Fáze 5: CI/CD Pipeline
 - [x] Nastavit GitHub Actions pro testy a build
 - [x] Konfigurovat Docker image building a publishing
-- [ ] Nastavit automatické NPM package publishing
+- [x] Nastavit automatické NPM package publishing
 - [ ] Přidat repository_dispatch event na meta-repo
 
 ### Fáze 6: Dokumentace
