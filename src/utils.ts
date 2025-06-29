@@ -70,12 +70,42 @@ export function jsonFriendlyErrorReplacer(_key: string, value: unknown) {
 }
 
 export const templateHelpers: Record<string, Handlebars.HelperDelegate> = {
+  /** Converts a string to uppercase. */
   toUpperCase: (str: unknown) => (typeof str === 'string' ? str.toUpperCase() : ''),
+  /** Converts a string to lowercase. */
   toLowerCase: (str: unknown) => (typeof str === 'string' ? str.toLowerCase() : ''),
+  /** Stringifies a value as pretty JSON. */
   jsonStringify: (context: any) => JSON.stringify(context, jsonFriendlyErrorReplacer, 2),
+  /** Joins an array with a separator. */
   join: (arr: unknown, sep: unknown) => {
     if (!Array.isArray(arr)) return '';
     return arr.join(typeof sep === 'string' ? sep : ', ');
   },
+  /** Checks if two values are equal. */
   eq: (a: unknown, b: unknown) => a === b,
+  /** Logical NOT. */
+  not: (v: unknown) => !v,
+  /** Logical AND. */
+  and: (...args: unknown[]) => args.slice(0, -1).every(Boolean),
+  /** Logical OR. */
+  or: (...args: unknown[]) => args.slice(0, -1).some(Boolean),
+  /** Gets the length of an array or string. */
+  length: (v: unknown) => (Array.isArray(v) || typeof v === 'string' ? v.length : 0),
+  /** Capitalizes the first letter of a string. */
+  capitalize: (str: unknown) =>
+    typeof str === 'string' && str.length > 0 ? str[0].toUpperCase() + str.slice(1) : '',
+  /** Formats a date string or Date object as YYYY-MM-DD. */
+  formatDate: (date: unknown) => {
+    const d = typeof date === 'string' ? new Date(date) : date instanceof Date ? date : null;
+    if (!d || isNaN(d.getTime())) return '';
+    return d.toISOString().slice(0, 10);
+  },
+  /** Adds two numbers. */
+  add: (a: unknown, b: unknown) => Number(a) + Number(b),
+  /** Subtracts b from a. */
+  subtract: (a: unknown, b: unknown) => Number(a) - Number(b),
+  /** Multiplies two numbers. */
+  multiply: (a: unknown, b: unknown) => Number(a) * Number(b),
+  /** Divides a by b. */
+  divide: (a: unknown, b: unknown) => Number(b) !== 0 ? Number(a) / Number(b) : '',
 };
