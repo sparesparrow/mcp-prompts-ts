@@ -4,7 +4,7 @@ import type {
   ApplyTemplateResult,
   Prompt,
 } from '@sparesparrow/mcp-prompts-contracts';
-import { promptSchemas } from '@sparesparrow/mcp-prompts-contracts';
+import { promptSchemas } from '@sparesparrow/mcp-prompts-contracts/dist/schemas';
 
 import type {
   CreatePromptParams,
