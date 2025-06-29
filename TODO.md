@@ -16,7 +16,7 @@
 
 ### Fáze 3: Opravy a Stabilizace
 - [x] Opravit HTTP Server error handling unit testy
-- [ ] Opravit PromptService template helpers unit testy
+- [x] Opravit PromptService template helpers unit testy
 - [ ] Implementovat concurrency control pro FileAdapter
 - [ ] Přidat atomic writes pro bezpečné aktualizace
 
