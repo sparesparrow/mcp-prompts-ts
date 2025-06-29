@@ -3,9 +3,9 @@
 ## Úkoly pro migraci a vývoj
 
 ### Fáze 1: Refaktoring a Cleanup
-- [ ] Odstranit ne-TypeScript kód (android_app/)
-- [ ] Odstranit adresáře extrahované v Phase 1 (prompts/, packages/)
-- [ ] Aktualizovat závislosti na versioned NPM balíčky
+- [x] Odstranit ne-TypeScript kód (android_app/)
+- [x] Odstranit adresáře extrahované v Phase 1 (prompts/, packages/)
+- [x] Aktualizovat závislosti na versioned NPM balíčky
 - [ ] Vyčistit package.json od nepotřebných závislostí
 
 ### Fáze 2: Aktualizace Dependencies
