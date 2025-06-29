@@ -15,7 +15,7 @@
 - [x] Aktualizovat importy v kódu
 
 ### Fáze 3: Opravy a Stabilizace
-- [ ] Opravit HTTP Server error handling unit testy
+- [x] Opravit HTTP Server error handling unit testy
 - [ ] Opravit PromptService template helpers unit testy
 - [ ] Implementovat concurrency control pro FileAdapter
 - [ ] Přidat atomic writes pro bezpečné aktualizace
