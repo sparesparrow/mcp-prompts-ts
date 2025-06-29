@@ -6,6 +6,7 @@
 import * as fsp from 'fs/promises';
 import fs from 'fs';
 import path from 'path';
+import { randomUUID } from 'crypto';
 
 import lockfile from 'proper-lockfile';
 import type { pino } from 'pino';
@@ -22,6 +23,17 @@ import {
 } from './interfaces.js';
 import { promptSchemas, workflowSchema } from './schemas.js';
 import { LockError } from './errors.js';
+
+// Helper for atomic file writes
+async function atomicWriteFile(filePath: string, data: string) {
+  const dir = path.dirname(filePath);
+  const tempFile = path.join(dir, `${path.basename(filePath)}.${randomUUID()}.tmp`);
+  await fsp.writeFile(tempFile, data);
+  const fd = await fsp.open(tempFile, 'r+');
+  await fd.sync();
+  await fd.close();
+  await fsp.rename(tempFile, filePath);
+}
 
 export function adapterFactory(config: McpConfig, logger: pino.Logger): StorageAdapter {
   const { storage } = config;
@@ -163,10 +175,6 @@ export class FileAdapter implements StorageAdapter {
 
     const parsedData = promptSchemas.create.parse(promptData);
     const id = this.generateId(parsedData.name);
-
-    // This is a critical section. We need to lock based on the prompt ID
-    // to prevent a race condition where two processes try to create the
-    // same new version number.
     const idLockPath = path.join(this.promptsDir, `${id}.lock`);
 
     return this.withLock(idLockPath, async () => {
@@ -187,9 +195,7 @@ export class FileAdapter implements StorageAdapter {
       promptSchemas.full.parse(promptWithDefaults);
 
       const promptFilePath = this.getPromptFileName(id, newVersion);
-      // We don't need a separate lock on the file itself since we hold the ID lock.
-      await fsp.writeFile(promptFilePath, JSON.stringify(promptWithDefaults, null, 2));
-
+      await atomicWriteFile(promptFilePath, JSON.stringify(promptWithDefaults, null, 2));
       return promptWithDefaults as Prompt;
     });
   }
@@ -237,68 +243,52 @@ export class FileAdapter implements StorageAdapter {
 
   public async updatePrompt(id: string, version: number, prompt: Partial<Prompt>): Promise<Prompt> {
     if (!this.connected) throw new Error('File storage not connected');
-
-    const existingPrompt = await this.getPrompt(id, version);
-    if (!existingPrompt) {
-      throw new Error(`Prompt with id ${id} and version ${version} not found`);
-    }
-
-    const updatedData = promptSchemas.update.parse(prompt);
-    const { metadata, ...restOfUpdatedData } = updatedData;
-
-    const updatedPrompt: Prompt = {
-      ...existingPrompt,
-      ...restOfUpdatedData,
-      id,
-      version,
-      variables: (updatedData.variables as any) ?? existingPrompt.variables,
-      tags: updatedData.tags ?? existingPrompt.tags,
-      metadata: metadata === null ? undefined : metadata ?? existingPrompt.metadata,
-      updatedAt: new Date().toISOString(),
-    };
-
-    const finalPath = this.getPromptFileName(id, version);
-    await this.withLock(finalPath, () =>
-      fsp.writeFile(finalPath, JSON.stringify(updatedPrompt, null, 2)),
-    );
-
-    return updatedPrompt;
+    const filePath = this.getPromptFileName(id, version);
+    const idLockPath = path.join(this.promptsDir, `${id}.lock`);
+    return this.withLock(idLockPath, async () => {
+      let existing: Prompt;
+      try {
+        existing = JSON.parse(await fsp.readFile(filePath, 'utf-8'));
+      } catch {
+        throw new Error(`Prompt ${id} v${version} not found`);
+      }
+      const updated: Prompt = {
+        ...existing,
+        ...prompt,
+        updatedAt: new Date().toISOString(),
+      };
+      promptSchemas.full.parse(updated);
+      await atomicWriteFile(filePath, JSON.stringify(updated, null, 2));
+      return updated;
+    });
   }
 
   public async deletePrompt(id: string, version?: number): Promise<boolean> {
     if (!this.connected) throw new Error('File storage not connected');
-    if (version !== undefined) {
-      const promptFilePath = this.getPromptFileName(id, version);
-      try {
-        await this.withLock(promptFilePath, () => fsp.unlink(promptFilePath));
-      } catch (error: any) {
-        if (error instanceof LockError) {
-          throw error; // Re-throw lock errors to be handled by the caller
+    const idLockPath = path.join(this.promptsDir, `${id}.lock`);
+    return this.withLock(idLockPath, async () => {
+      if (version) {
+        const filePath = this.getPromptFileName(id, version);
+        try {
+          await fsp.unlink(filePath);
+          return true;
+        } catch {
+          return false;
         }
-        if (error.code === 'ENOENT') {
-          return true; // Consider it successfully deleted if it doesn't exist.
+      } else {
+        // Delete all versions
+        const versions = await this.listPromptVersions(id);
+        let deleted = false;
+        for (const v of versions) {
+          const filePath = this.getPromptFileName(id, v);
+          try {
+            await fsp.unlink(filePath);
+            deleted = true;
+          } catch {}
         }
-        throw error;
+        return deleted;
       }
-      return true;
-    }
-
-    const versions = await this.listPromptVersions(id);
-    if (versions.length === 0) {
-      return false;
-    }
-    for (const v of versions) {
-      const promptFilePath = this.getPromptFileName(id, v);
-      try {
-        await this.withLock(promptFilePath, () => fsp.unlink(promptFilePath));
-      } catch (error: any) {
-        if (error.code !== 'ENOENT') {
-          console.error(`Error deleting prompt ${id} v${v}:`, error);
-          // Decide if we should re-throw. For now, we continue but log the error.
-        }
-      }
-    }
-    return true;
+    });
   }
 
   public async listPrompts(options?: ListPromptsOptions, allVersions = false): Promise<Prompt[]> {
@@ -388,7 +378,7 @@ export class FileAdapter implements StorageAdapter {
   public async saveSequence(sequence: PromptSequence): Promise<PromptSequence> {
     const sequencePath = path.join(this.sequencesDir, `${sequence.id}.json`);
     await this.withLock(sequencePath, () =>
-      fsp.writeFile(sequencePath, JSON.stringify(sequence, null, 2)),
+      atomicWriteFile(sequencePath, JSON.stringify(sequence, null, 2)),
     );
     return sequence;
   }
@@ -407,7 +397,7 @@ export class FileAdapter implements StorageAdapter {
   public async saveWorkflowState(state: WorkflowExecutionState): Promise<void> {
     const statePath = path.join(this.workflowStatesDir, `${state.executionId}.json`);
     await this.withLock(statePath, () =>
-      fsp.writeFile(statePath, JSON.stringify(state, null, 2)),
+      atomicWriteFile(statePath, JSON.stringify(state, null, 2)),
     );
   }
 

@@ -17,8 +17,8 @@
 ### Fáze 3: Opravy a Stabilizace
 - [x] Opravit HTTP Server error handling unit testy
 - [x] Opravit PromptService template helpers unit testy
-- [ ] Implementovat concurrency control pro FileAdapter
-- [ ] Přidat atomic writes pro bezpečné aktualizace
+- [x] Implementovat concurrency control pro FileAdapter
+- [x] Přidat atomic writes pro bezpečné aktualizace
 
 ### Fáze 4: Pokročilé Funkce
 - [ ] Implementovat conditional logic v templating engine
