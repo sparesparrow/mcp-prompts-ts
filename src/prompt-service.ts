@@ -13,6 +13,7 @@ import type {
   StorageAdapter,
   TemplateVariable,
   UpdatePromptParams,
+  TemplateFormatOptions,
 } from './interfaces.js';
 import type { ApplyTemplateResult } from './interfaces.js';
 import * as Prompts from './prompts.js';
@@ -210,6 +211,7 @@ export class PromptService {
     id: string,
     variables: Record<string, any>,
     version?: number,
+    options?: TemplateFormatOptions,
   ): Promise<ApplyTemplateResult> {
     const prompt = await this.getPrompt(id, version);
     if (!prompt) {
@@ -223,7 +225,7 @@ export class PromptService {
       // Recursively find and register partials, starting the call stack with the root prompt
       await this.registerPartialsRecursive(prompt.content, new Set(), new Set([prompt.id]));
 
-      const content = this.processTemplate(prompt.content, variables);
+      const content = this.processTemplate(prompt.content, variables, options);
 
       // Check for any remaining template variables
       const remaining = content.match(/{{[^}]+}}/g);
@@ -382,11 +384,29 @@ export class PromptService {
     };
   }
 
-  private processTemplate(template: string, variables: Record<string, any>): string {
+  private processTemplate(template: string, variables: Record<string, any>, options?: TemplateFormatOptions): string {
     try {
+      let delimiters: [string, string] | undefined;
+      if (options?.delimiterStyle) {
+        switch (options.delimiterStyle) {
+          case 'curly':
+            delimiters = ['{', '}'];
+            break;
+          case 'double_curly':
+            delimiters = ['{{', '}}'];
+            break;
+          case 'dollar':
+            delimiters = ['${', '}'];
+            break;
+          case 'percent':
+            delimiters = ['%{', '}'];
+            break;
+        }
+      }
       const compiled = Handlebars.compile(template, {
         strict: true,
         preventIndent: true,
+        ...(delimiters ? { delimiters } : {}),
       });
       return compiled(variables);
     } catch (e: any) {
