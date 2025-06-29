@@ -21,10 +21,10 @@
 - [x] Přidat atomic writes pro bezpečné aktualizace
 
 ### Fáze 4: Pokročilé Funkce
-- [ ] Implementovat conditional logic v templating engine
-- [ ] Přidat nested templates / partials podporu
-- [ ] Implementovat configurable delimiters
-- [ ] Přidat helper functions pro šablony
+- [x] Implementovat conditional logic v templating engine
+- [x] Přidat nested templates / partials podporu
+- [x] Implementovat configurable delimiters
+- [x] Přidat helper functions pro šablony
 
 ### Fáze 5: CI/CD Pipeline
 - [ ] Nastavit GitHub Actions pro testy a build
