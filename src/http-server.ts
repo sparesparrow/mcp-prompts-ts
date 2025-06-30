@@ -211,7 +211,7 @@ export async function startHttpServer(
   if (config.rateLimit) {
     app.use(rateLimit(config.rateLimit));
   }
-  app.use(apiKeyAuth); // Apply API key authentication to all routes
+  app.use((req: Request, res: Response, next: NextFunction) => apiKeyAuth(req, res, next)); // Apply API key authentication to all routes
 
   // Swagger docs
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
@@ -229,7 +229,7 @@ export async function startHttpServer(
    *       200:
    *         description: Server is healthy
    */
-  app.get('/health', (_req, res) => res.status(200).send('OK'));
+  app.get('/health', (_req: Request, res: Response) => res.status(200).send('OK'));
 
   // --- Prompts ---
 
