@@ -9,11 +9,11 @@
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, Server as HttpServer, ServerResponse } from 'node:http';
 import { promisify } from 'node:util';
-import { brotliCompress, deflate, gzip } from 'node:zlib';
+import { gzip, deflate, brotliCompress } from 'zlib/promises';
 
-import type { Server as MCPServer } from '@modelcontextprotocol/sdk/server';
-import type { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse';
-import { Transport } from '@modelcontextprotocol/sdk/shared/transport';
+import { Server } from '@modelcontextprotocol/sdk/dist/esm/server/index.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/dist/esm/server/sse.js';
+import type { Transport } from '@modelcontextprotocol/sdk/dist/esm/shared/transport.js';
 import { EventEmitter } from 'events';
 import { Express, Request, Response } from 'express';
 import { pino } from 'pino';
@@ -686,13 +686,13 @@ export class SseManager extends EventEmitter {
 
           switch (algorithm) {
             case 'gzip':
-              compressedData = await gzipAsync(Buffer.from(data));
+              compressedData = await gzip(Buffer.from(data));
               break;
             case 'deflate':
-              compressedData = await deflateAsync(Buffer.from(data));
+              compressedData = await deflate(Buffer.from(data));
               break;
             case 'brotli':
-              compressedData = await brotliCompressAsync(Buffer.from(data));
+              compressedData = await brotliCompress(Buffer.from(data));
               break;
             default:
               throw new Error(`Unsupported compression algorithm: ${algorithm}`);
