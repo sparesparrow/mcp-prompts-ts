@@ -23,6 +23,8 @@ import {
   releaseWorkflowSlot,
   ShellRunner,
 } from './workflow-service.js';
+import type { StorageAdapter } from './types/manual-exports.js';
+import { promptSchemas } from './types/manual-exports.js';
 
 const catchAsync = (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) => {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -306,7 +308,7 @@ export async function startHttpServer(
       const { id } = req.params;
       const prompt = await promptService.getPrompt(id);
       if (!prompt) {
-        throw new AppError('Prompt not found', HttpErrorCode.NOT_FOUND);
+        throw new AppError('Prompt not found', 404, HttpErrorCode.NOT_FOUND);
       }
       res.status(200).json(prompt);
     }),
@@ -372,7 +374,7 @@ export async function startHttpServer(
     catchAsync(async (req, res) => {
       const { prompts } = req.body;
       if (!Array.isArray(prompts)) {
-        throw new AppError('`prompts` must be an array', 400, 'VALIDATION_ERROR');
+        throw new AppError('`prompts` must be an array', 400, HttpErrorCode.VALIDATION_ERROR);
       }
       const results = await services.promptService.createPromptsBulk(prompts);
       const hasErrors = results.some(r => !r.success);
@@ -418,7 +420,7 @@ export async function startHttpServer(
     catchAsync(async (req, res) => {
       const { ids } = req.body;
       if (!Array.isArray(ids)) {
-        throw new AppError('`ids` must be an array of strings', 400, 'VALIDATION_ERROR');
+        throw new AppError('`ids` must be an array of strings', 400, HttpErrorCode.VALIDATION_ERROR);
       }
       const results = await services.promptService.deletePromptsBulk(ids);
       const hasErrors = results.some(r => !r.success);
@@ -464,7 +466,7 @@ export async function startHttpServer(
       const version = parseInt(req.params.version, 10);
       const prompt = await promptService.getPrompt(id, version);
       if (!prompt) {
-        throw new AppError('Prompt not found', HttpErrorCode.NOT_FOUND);
+        throw new AppError('Prompt not found', 404, HttpErrorCode.NOT_FOUND);
       }
       res.status(200).json(prompt);
     }),
@@ -538,7 +540,7 @@ export async function startHttpServer(
       const version = req.params.version ? parseInt(req.params.version, 10) : undefined;
       const success = await promptService.deletePrompt(id, version);
       if (!success) {
-        throw new AppError('Prompt not found', HttpErrorCode.NOT_FOUND);
+        throw new AppError('Prompt not found', 404, HttpErrorCode.NOT_FOUND);
       }
       res.status(204).send();
     }),
@@ -590,7 +592,7 @@ export async function startHttpServer(
     catchAsync(async (req, res) => {
       const sequence = await sequenceService.getSequence(req.params.id);
       if (!sequence) {
-        throw new AppError('Sequence not found', HttpErrorCode.NOT_FOUND);
+        throw new AppError('Sequence not found', 404, HttpErrorCode.NOT_FOUND);
       }
       res.status(200).json(sequence);
     }),
@@ -631,7 +633,7 @@ export async function startHttpServer(
     catchAsync(async (req, res) => {
       const workflow = loadWorkflowFromFile(req.params.id);
       if (!workflow) {
-        throw new AppError('Workflow not found', HttpErrorCode.NOT_FOUND);
+        throw new AppError('Workflow not found', 404, HttpErrorCode.NOT_FOUND);
       }
       res.status(200).json(workflow);
     }),
@@ -651,7 +653,7 @@ export async function startHttpServer(
       const version = parseInt(req.params.version, 10);
       const workflow = loadWorkflowFromFile(req.params.id, version);
       if (!workflow) {
-        throw new AppError('Workflow not found', HttpErrorCode.NOT_FOUND);
+        throw new AppError('Workflow not found', 404, HttpErrorCode.NOT_FOUND);
       }
       res.status(200).json(workflow);
     }),
@@ -665,7 +667,7 @@ export async function startHttpServer(
       const version = req.query.version ? parseInt(req.query.version as string, 10) : undefined;
       const workflow = loadWorkflowFromFile(id, version);
       if (!workflow) {
-        throw new AppError('Workflow not found', HttpErrorCode.NOT_FOUND);
+        throw new AppError('Workflow not found', 404, HttpErrorCode.NOT_FOUND);
       }
       const executionId = await workflowService.executeWorkflow(workflow, req.body.context);
       res.status(202).json({
@@ -682,7 +684,7 @@ export async function startHttpServer(
       const { executionId } = req.params;
       const state = await workflowService.getWorkflowState(executionId);
       if (!state) {
-        throw new AppError('Workflow execution not found', HttpErrorCode.NOT_FOUND);
+        throw new AppError('Workflow execution not found', 404, HttpErrorCode.NOT_FOUND);
       }
       res.status(200).json(state);
     }),
@@ -719,7 +721,7 @@ export async function startHttpServer(
       catchAsync(async (req, res) => {
         const { text, voiceId, modelId } = req.body;
         if (!text) {
-          throw new AppError('Text is required for audio generation', HttpErrorCode.BAD_REQUEST);
+          throw new AppError('Text is required for audio generation', 400, HttpErrorCode.VALIDATION_ERROR);
         }
         const { audioData, metadata } = await services.elevenLabsService.generateAudio({
           text,

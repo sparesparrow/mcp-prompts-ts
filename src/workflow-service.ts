@@ -9,7 +9,7 @@ import { AppError } from './errors.js';
 import type { StorageAdapter, WorkflowExecutionState } from './interfaces.js';
 import type { PromptService } from './prompt-service.js';
 import { workflowSchema } from './schemas.js';
-import { getSseManager } from './sse';
+import { getSseManager } from './sse.js';
 // If using Node <18, uncomment the following line:
 // import fetch from 'node-fetch';
 
@@ -346,7 +346,7 @@ export class WorkflowServiceImpl implements WorkflowService {
     const rateLimiter = getWorkflowRateLimiter();
 
     if (!rateLimiter(userId)) {
-      throw new AppError('Rate limit exceeded', 429, 'RATE_LIMIT_EXCEEDED');
+      throw new AppError('Rate limit exceeded', 429, HttpErrorCode.RATE_LIMIT);
     }
 
     try {
