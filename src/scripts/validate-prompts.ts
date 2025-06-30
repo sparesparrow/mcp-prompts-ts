@@ -10,7 +10,8 @@
  *   npm run validate:prompts [cesta_ke_kořenovému_adresáři]
  */
 
-import * as Ajv from 'ajv';
+// @ts-ignore
+const Ajv = require('ajv');
 import fs from 'fs/promises';
 import path from 'path';
 import { cwd } from 'process';
@@ -70,7 +71,7 @@ const schema: Record<string, unknown> = {
   type: 'object',
 };
 
-const ajv = new Ajv.default({ allErrors: true });
+const ajv = new Ajv({ allErrors: true });
 const validate = ajv.compile(schema);
 
 /**
