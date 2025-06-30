@@ -26,6 +26,37 @@ import {
 import type { StorageAdapter } from './types/manual-exports.js';
 import { promptSchemas } from './types/manual-exports.js';
 
+// Global error handler middleware (must be at module level for export)
+export const errorHandler: express.ErrorRequestHandler = (err, req, res, next) => {
+  console.error(err);
+  if (err instanceof z.ZodError) {
+    res.status(400).json({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid input data.',
+        details: err.errors,
+      },
+    });
+    return;
+  }
+  if (err instanceof AppError) {
+    res.status(err.statusCode).json({
+      error: {
+        code: err.code,
+        message: err.message,
+        details: 'details' in err ? (err as any).details : undefined,
+      },
+    });
+    return;
+  }
+  res.status(500).json({
+    error: {
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'An unexpected error occurred',
+    },
+  });
+};
+
 const catchAsync = (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) => {
   return (req: Request, res: Response, next: NextFunction) => {
     fn(req, res, next).catch(next);
@@ -764,36 +795,6 @@ export async function startHttpServer(
     });
   });
 
-  // Global error handler middleware (must be at module level for export)
-  export const errorHandler: express.ErrorRequestHandler = (err, req, res, next) => {
-    console.error(err);
-    if (err instanceof z.ZodError) {
-      res.status(400).json({
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid input data.',
-          details: err.errors,
-        },
-      });
-      return;
-    }
-    if (err instanceof AppError) {
-      res.status(err.statusCode).json({
-        error: {
-          code: err.code,
-          message: err.message,
-          details: 'details' in err ? (err as any).details : undefined,
-        },
-      });
-      return;
-    }
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'An unexpected error occurred',
-      },
-    });
-  };
   app.use(errorHandler);
 
   // Ensure the function always returns a Promise<http.Server>
