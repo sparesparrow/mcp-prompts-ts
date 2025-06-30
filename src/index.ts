@@ -32,8 +32,11 @@ async function main() {
     }),
   });
 
-  const allowedStorageTypes = ['file', 'postgres', 'memory'];
-  const storageType = allowedStorageTypes.includes(env.STORAGE_TYPE) ? env.STORAGE_TYPE : 'file';
+  const allowedStorageTypes = ['file', 'postgres', 'memory'] as const;
+  type AllowedStorageType = typeof allowedStorageTypes[number];
+  const storageType: AllowedStorageType = allowedStorageTypes.includes(env.STORAGE_TYPE as AllowedStorageType)
+    ? (env.STORAGE_TYPE as AllowedStorageType)
+    : 'file';
   const config = {
     ...env,
     storage: {
@@ -46,6 +49,16 @@ async function main() {
       ssl: env.POSTGRES_SSL,
       type: storageType,
       user: env.POSTGRES_USER,
+    } as {
+      database: string | undefined;
+      host: string | undefined;
+      maxConnections: number | undefined;
+      password: string | undefined;
+      port: number | undefined;
+      promptsDir: string;
+      ssl: boolean | undefined;
+      type: AllowedStorageType;
+      user: string | undefined;
     },
   };
 
