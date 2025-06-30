@@ -59,6 +59,10 @@ export interface WorkflowService {
    */
   runWorkflow(workflow: Workflow, initialContext?: WorkflowContext): Promise<RunWorkflowResult>;
   resumeWorkflow(executionId: string, input: unknown): Promise<RunWorkflowResult>;
+  executeWorkflow(workflow: any, context?: any): Promise<any>;
+  getWorkflowState(executionId: string): Promise<any>;
+  pauseWorkflow(executionId: string): Promise<void>;
+  cancelWorkflow(executionId: string): Promise<void>;
 }
 
 export class WorkflowServiceImpl implements WorkflowService {
@@ -429,6 +433,26 @@ export class WorkflowServiceImpl implements WorkflowService {
     };
     // Continue execution from the next step
     return this.runWorkflowSteps(workflow, state, stepRunners);
+  }
+
+  public async executeWorkflow(workflow: any, context?: any): Promise<any> {
+    // Stub implementation
+    return { workflow, context, executionId: 'stub-execution-id' };
+  }
+
+  public async getWorkflowState(executionId: string): Promise<any> {
+    // Stub implementation
+    return { executionId, state: 'stub' };
+  }
+
+  public async pauseWorkflow(executionId: string): Promise<void> {
+    // Stub implementation
+    return;
+  }
+
+  public async cancelWorkflow(executionId: string): Promise<void> {
+    // Stub implementation
+    return;
   }
 }
 
