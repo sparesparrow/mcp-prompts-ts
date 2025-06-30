@@ -661,12 +661,12 @@ export async function startHttpServer(
   );
 
   // Express middleware for workflow rate limiting
-  function workflowRateLimiter(req: express.Request, res: express.Response, next: express.NextFunction) {
-    // Extract userId from request (body, query, or headers as appropriate)
+  function workflowRateLimiter(req: express.Request, res: express.Response, next: express.NextFunction): void {
     const userId = req.body?.userId || req.query?.userId || req.header('x-user-id') || 'anonymous';
     const rateLimiter = getWorkflowRateLimiter();
     if (!rateLimiter(userId)) {
-      return res.status(429).json({ error: 'Rate limit exceeded' });
+      res.status(429).json({ error: 'Rate limit exceeded' });
+      return;
     }
     next();
   }
@@ -765,27 +765,29 @@ export async function startHttpServer(
   });
 
   // Global error handler middleware
-  const errorHandler: express.ErrorRequestHandler = (err, req, res, next) => {
+  export const errorHandler: express.ErrorRequestHandler = (err, req, res, next) => {
     console.error(err);
     if (err instanceof z.ZodError) {
-      return res.status(400).json({
+      res.status(400).json({
         error: {
           code: 'VALIDATION_ERROR',
           message: 'Invalid input data.',
           details: err.errors,
         },
       });
+      return;
     }
     if (err instanceof AppError) {
-      return res.status(err.statusCode).json({
+      res.status(err.statusCode).json({
         error: {
           code: err.code,
           message: err.message,
           details: 'details' in err ? (err as any).details : undefined,
         },
       });
+      return;
     }
-    return res.status(500).json({
+    res.status(500).json({
       error: {
         code: 'INTERNAL_SERVER_ERROR',
         message: 'An unexpected error occurred',

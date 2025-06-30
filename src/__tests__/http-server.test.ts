@@ -7,13 +7,14 @@ import type { NextFunction, Request, Response } from 'express';
 
 import { closeServer } from '../../tests/setup.js';
 import { AppError, HttpErrorCode } from '../errors.js';
-import { errorHandler, startHttpServer } from '../http-server.js';
+import { errorHandler, startHttpServer } from '../http-server';
 import type { Prompt } from '../interfaces.js';
 import type { PromptService } from '../prompt-service.js';
 import type { SequenceService } from '../sequence-service.js';
 import type { WorkflowService } from '../workflow-service.js';
+import { promptSchemas } from '../types/manual-exports.js';
 
-describe.skip('HTTP Server', () => {
+describe('HTTP Server', () => {
   let server: Server;
   let promptService: DeepMockProxy<PromptService>;
   let sequenceService: DeepMockProxy<SequenceService>;
