@@ -11,9 +11,11 @@ import type { IncomingMessage, Server as HttpServer, ServerResponse } from 'node
 import { promisify } from 'node:util';
 import { gzip, deflate, brotliCompress } from 'zlib/promises';
 
-import { Server } from '@modelcontextprotocol/sdk/dist/esm/server/index.js';
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/dist/esm/server/sse.js';
-import type { Transport } from '@modelcontextprotocol/sdk/dist/esm/shared/transport.js';
+import * as SDKServer from '@modelcontextprotocol/sdk/dist/esm/server/index.js';
+import * as SDKSSE from '@modelcontextprotocol/sdk/dist/esm/server/sse.js';
+import type { Server } from '@modelcontextprotocol/sdk/dist/esm/server/index.d.ts';
+import type { SSEServerTransport } from '@modelcontextprotocol/sdk/dist/esm/server/sse.d.ts';
+import type { Transport } from '@modelcontextprotocol/sdk/dist/esm/shared/transport.d.ts';
 import { EventEmitter } from 'events';
 import { Express, Request, Response } from 'express';
 import { pino } from 'pino';
