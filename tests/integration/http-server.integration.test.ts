@@ -339,7 +339,7 @@ describe('Bulk Prompt Operations', () => {
     const res = await request(baseUrl)
       .post('/prompts/bulk-create')
       .set('x-api-key', 'test-key')
-      .send({ prompts });
+      .send(prompts);
 
     expect(res.status).toBe(207);
     expect(res.body.results).toHaveLength(4);
@@ -361,7 +361,7 @@ describe('Bulk Prompt Operations', () => {
       await request(baseUrl)
         .post('/prompts/bulk-create')
         .set('x-api-key', 'test-key')
-        .send({ prompts: [makePromptPayload({ name: 'p1' }), makePromptPayload({ name: 'p2' })] })
+        .send([makePromptPayload({ name: 'p1' }), makePromptPayload({ name: 'p2' })])
     ).body.results;
 
     const res = await request(baseUrl)
