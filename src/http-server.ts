@@ -174,7 +174,7 @@ const swaggerSpec = swaggerJSDoc(swaggerOptions);
  * Reads valid API keys from process.env.API_KEYS (comma-separated)
  * Skips /health and /api-docs endpoints
  */
-function apiKeyAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+const apiKeyAuth: express.RequestHandler = (req, res, next) => {
   const openPaths = ['/health', '/api-docs'];
   if (openPaths.some(path => req.path.startsWith(path))) {
     return next();
@@ -188,7 +188,7 @@ function apiKeyAuth(req: express.Request, res: express.Response, next: express.N
     return res.status(401).json({ error: 'Unauthorized: missing or invalid API key' });
   }
   next();
-}
+};
 
 /**
  *
@@ -229,7 +229,7 @@ export async function startHttpServer(
    *       200:
    *         description: Server is healthy
    */
-  app.get('/health', (_req, res) => res.status(200).send('OK'));
+  app.get('/health', function (_req, res) { res.status(200).send('OK'); });
 
   // --- Prompts ---
 
