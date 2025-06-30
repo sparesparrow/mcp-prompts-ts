@@ -91,7 +91,11 @@ export class PromptService {
       throw new ValidationError(`Invalid prompt data: ${error.message}`, error.issues);
     }
 
-    validateTemplateVariables(args);
+    validateTemplateVariables({
+      content: args.content,
+      isTemplate: args.isTemplate ?? false,
+      variables: args.variables ?? [],
+    });
 
     const promptId = args.id ?? this.generateId(args.name);
     const existingByName = await this.storage.getPrompt(promptId);
@@ -166,7 +170,11 @@ export class PromptService {
       updatedAt: new Date().toISOString(), // Set new update date
     };
 
-    validateTemplateVariables(updatedPromptData);
+    validateTemplateVariables({
+      content: updatedPromptData.content,
+      isTemplate: updatedPromptData.isTemplate ?? false,
+      variables: updatedPromptData.variables ?? [],
+    });
 
     const result = await this.storage.updatePrompt(id, version, updatedPromptData);
     await this.invalidatePromptCache(id);
