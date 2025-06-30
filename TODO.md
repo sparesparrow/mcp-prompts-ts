@@ -38,7 +38,7 @@
 - [x] Aktualizovat API dokumentaci
 - [x] Vytvořit příklady použití
 - [x] Dokumentovat konfigurační možnosti
-- [ ] Vytvořit migrační průvodce
+- [x] Vytvořit migrační průvodce
 
 ### Fáze 7: Testování
 - [ ] Spustit kompletní test suite
@@ -52,4 +52,6 @@
 
 > Usage examples added to README.md. Next: document configuration options, referencing the configuration guide.
 
-> Configuration options summarized in README.md. Next: create a migration guide for users moving from the monorepo to the new multi-repo/meta-repo setup. 
+> Configuration options summarized in README.md. Next: create a migration guide for users moving from the monorepo to the new multi-repo/meta-repo setup.
+
+> Migration guide added to README.md. Documentation phase complete. Next: run the full test suite and validate integration as per Fáze 7. 

@@ -88,3 +88,29 @@ MCP Prompts is configured via environment variables. Here are the most important
 For advanced options (Postgres, ElasticSearch, SSE, ElevenLabs, etc.), see the [full configuration guide](mcp-prompts/docs/02-configuration.md).
 
 All variables are validated at startup. If any required variable is missing or invalid, the server will print a clear error and exit.
+
+## Migration Guide
+
+### Why migrate?
+- Improved modularity and scalability
+- Separate versioning and CI/CD for each component
+- Fine-grained access control and easier collaboration
+
+### New Structure
+- Each major component (e.g., contracts, catalog, server) is now in its own repository
+- This repository acts as the meta-repo, tracking and coordinating the ecosystem
+
+### Migration Steps
+1. **Clone the new repositories** for each component you need (see MIGRATION.md for links)
+2. **Update your dependencies** to use the new NPM packages (e.g., `@sparesparrow/mcp-prompts-contracts`, `@sparesparrow/mcp-prompts-catalog`)
+3. **Update import paths** in your code to reference the new packages
+4. **Migrate any local data or configuration** as described in the [MIGRATION.md](MIGRATION.md)
+5. **Test your setup** using the new multi-repo structure and report any issues
+
+### Best Practices
+- Migrate incrementally: you can move one component at a time
+- Use version tags and releases to coordinate changes across repos
+- Set up CI/CD for each repo to automate testing and publishing
+- Use the meta-repo for coordination, documentation, and cross-repo issues
+
+For full details and troubleshooting, see [MIGRATION.md](MIGRATION.md).
