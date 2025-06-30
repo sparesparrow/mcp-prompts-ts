@@ -11,11 +11,9 @@ import type { IncomingMessage, Server as HttpServer, ServerResponse } from 'node
 import { promisify } from 'node:util';
 import { gzip, deflate, brotliCompress } from 'zlib/promises';
 
-import * as SDKServer from '@modelcontextprotocol/sdk/dist/esm/server/index.js';
-import * as SDKSSE from '@modelcontextprotocol/sdk/dist/esm/server/sse.js';
-import type { Server } from '@modelcontextprotocol/sdk/dist/esm/server/index.js';
-import type { SSEServerTransport } from '@modelcontextprotocol/sdk/dist/esm/server/sse.js';
-import type { Transport } from '@modelcontextprotocol/sdk/dist/esm/shared/transport.js';
+import type * as SDKServerTypes from '@modelcontextprotocol/sdk/dist/esm/server/index.js';
+import type * as SDKSSETypes from '@modelcontextprotocol/sdk/dist/esm/server/sse.js';
+import type * as SDKTransportTypes from '@modelcontextprotocol/sdk/dist/esm/shared/transport.js';
 import { EventEmitter } from 'events';
 import { Express, Request, Response } from 'express';
 import { pino } from 'pino';
@@ -170,7 +168,7 @@ export class SseManager extends EventEmitter {
   private clients: Map<string, SseClient> = new Map();
   private _options: SseManagerOptions;
   private _transportImpl: TransportImplementation | null = null;
-  private sseTransport: SSEServerTransport | null = null;
+  private sseTransport: SDKSSETypes.SSEServerTransport | null = null;
   private static instance: SseManager | null = null;
   private cleanupInterval: NodeJS.Timeout | null = null;
   private messageRetryInterval: NodeJS.Timeout | null = null;
