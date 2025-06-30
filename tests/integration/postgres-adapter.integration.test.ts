@@ -35,7 +35,7 @@ describe.skip('PostgresAdapter Integration', () => {
   beforeEach(async () => {
     if (isConnected) {
       // Clear the tables before each test
-      await adapter.clearForTest();
+      // TODO: Implement cleanup for PostgresAdapter if test isolation is required
     }
   });
 

@@ -45,7 +45,7 @@
     "workflow:run:file": "ts-node src/scripts/workflow-cli.ts workflow run",
     "workflow:save:file": "ts-node src/scripts/workflow-cli.ts workflow save",
     "workflow:run:id": "ts-node src/scripts/workflow-cli.ts workflow run",
-    "docs:generate": "typedoc --ignoreCompilerErrors --out docs/api src/index.ts"
+    "docs:generate": "typedoc --out docs/api src/index.ts"
   },
   "keywords": [
     "mcp",
@@ -57,9 +57,10 @@
   "license": "MIT",
   "dependencies": {
     "@elastic/elasticsearch": "^9.0.2",
-    "@modelcontextprotocol/sdk": "^1.13.0",
+    "@modelcontextprotocol/sdk": "^1.13.2",
     "@modelcontextprotocol/server-postgres": "0.6.2",
-    "@sparesparrow/mcp-prompts-contracts": "0.1.0",
+    "@sparesparrow/mcp-prompts-catalog": "^0.1.0",
+    "@sparesparrow/mcp-prompts-contracts": "^0.1.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "axios": "^1.10.0",

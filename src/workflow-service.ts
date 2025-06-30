@@ -5,7 +5,7 @@ import path from 'path';
 import { promisify } from 'util';
 import type { z } from 'zod';
 
-import { AppError } from './errors.js';
+import { AppError, HttpErrorCode } from './errors.js';
 import type { StorageAdapter, WorkflowExecutionState } from './interfaces.js';
 import type { PromptService } from './prompt-service.js';
 import { workflowSchema } from './schemas.js';

@@ -1,13 +1,14 @@
 import { jest } from '@jest/globals';
-import { mock } from 'jest-mock-extended';
 
-import type { StorageAdapter, PromptService, WorkflowExecutionState } from '../../src/interfaces.js';
+import type { StorageAdapter, WorkflowExecutionState } from '../../src/interfaces.js';
+import { PromptService } from '../../src/prompt-service.js';
 import {
   PromptRunner,
   ShellRunner,
   WorkflowServiceImpl,
   type Workflow,
 } from '../../src/workflow-service.js';
+import type { Prompt, ListPromptsOptions, TemplateVariables, ApplyTemplateResult } from '../../src/interfaces.js';
 
 // Mock StepRunners for stateless tests
 const mockStatelessPromptRunner = {
@@ -27,39 +28,47 @@ const statelessStepRunners = {
 };
 
 // Mocks for stateful tests
-const mockStorageAdapter: StorageAdapter = {
-  connect: jest.fn() as unknown as () => Promise<void>,
-  disconnect: jest.fn() as unknown as () => Promise<void>,
-  isConnected: jest.fn() as unknown as () => boolean | Promise<boolean>,
-  savePrompt: jest.fn() as unknown as () => Promise<any>,
-  getPrompt: jest.fn() as unknown as () => Promise<any>,
-  listPromptVersions: jest.fn() as unknown as () => Promise<number[]>,
-  updatePrompt: jest.fn() as unknown as () => Promise<any>,
-  listPrompts: jest.fn() as unknown as () => Promise<any[]>,
-  deletePrompt: jest.fn() as unknown as (id: string, version?: number) => Promise<boolean>,
-  clearAll: jest.fn() as unknown as () => Promise<void>,
-  backup: jest.fn() as unknown as () => Promise<string>,
-  restore: jest.fn() as unknown as (backupId: string) => Promise<void>,
-  listBackups: jest.fn() as unknown as () => Promise<string[]>,
-  getSequence: jest.fn() as unknown as (id: string) => Promise<any>,
-  saveSequence: jest.fn() as unknown as () => Promise<any>,
-  deleteSequence: jest.fn() as unknown as (id: string) => Promise<void>,
-  healthCheck: jest.fn() as unknown as () => Promise<boolean>,
-  saveWorkflowState: jest.fn() as unknown as (state: any) => Promise<void>,
-  getWorkflowState: jest.fn() as unknown as (executionId: string) => Promise<WorkflowExecutionState>,
-  listWorkflowStates: jest.fn() as unknown as (workflowId: string) => Promise<any[]>,
+const mockStorageAdapter: any = {
+  connect: jest.fn(),
+  disconnect: jest.fn(),
+  isConnected: jest.fn(),
+  savePrompt: jest.fn(),
+  getPrompt: jest.fn(),
+  listPromptVersions: jest.fn(),
+  updatePrompt: jest.fn(),
+  listPrompts: jest.fn(),
+  deletePrompt: jest.fn(),
+  clearAll: jest.fn(),
+  backup: jest.fn(),
+  restore: jest.fn(),
+  listBackups: jest.fn(),
+  getSequence: jest.fn(),
+  saveSequence: jest.fn(),
+  deleteSequence: jest.fn(),
+  healthCheck: jest.fn(),
+  saveWorkflowState: jest.fn(),
+  getWorkflowState: jest.fn(),
+  listWorkflowStates: jest.fn(),
 };
 
-const mockPromptService = mock<PromptService>();
+const mockPromptService: any = {
+  storage: {} as StorageAdapter,
+  promptCache: new Map(),
+  initializeTemplateEngine: jest.fn(),
+  initialize: jest.fn(),
+  getPrompt: jest.fn<(id: string, version?: number) => Promise<Prompt | null>>(),
+  addPrompt: jest.fn<(data: Partial<Prompt>) => Promise<Prompt>>(),
+  updatePrompt: jest.fn<(id: string, version: number, data: Partial<Prompt>) => Promise<Prompt>>(),
+  listPrompts: jest.fn<(options?: ListPromptsOptions, allVersions?: boolean) => Promise<Prompt[]>>(),
+  deletePrompt: jest.fn<(id: string, version?: number) => Promise<boolean>>(),
+  listPromptVersions: jest.fn<(id: string) => Promise<number[]>>(),
+  applyTemplate: jest.fn<(id: string, variables: TemplateVariables, version?: number) => Promise<ApplyTemplateResult>>(),
+};
 
 describe('WorkflowService (Stateless)', () => {
   let service: WorkflowServiceImpl;
-  let mockStorageAdapter: jest.Mocked<StorageAdapter>;
-  let mockPromptService: jest.Mocked<PromptService>;
 
   beforeEach(() => {
-    mockStorageAdapter = mock<StorageAdapter>();
-    mockPromptService = mock<PromptService>();
     service = new WorkflowServiceImpl(mockStorageAdapter, mockPromptService);
     jest.clearAllMocks();
   });
@@ -89,6 +98,7 @@ describe('WorkflowService (Stateless)', () => {
         workflowId: '',
         createdAt: '',
         updatedAt: '',
+        version: 1,
       },
       statelessStepRunners,
     );
@@ -103,12 +113,8 @@ describe('WorkflowService (Stateless)', () => {
 
 describe('WorkflowService (Stateful)', () => {
   let service: WorkflowServiceImpl;
-  let mockStorageAdapter: jest.Mocked<StorageAdapter>;
-  let mockPromptService: jest.Mocked<PromptService>;
 
   beforeEach(() => {
-    mockStorageAdapter = mock<StorageAdapter>();
-    mockPromptService = mock<PromptService>();
     service = new WorkflowServiceImpl(mockStorageAdapter, mockPromptService);
   });
 
