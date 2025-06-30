@@ -71,3 +71,20 @@ Expect `{ "status": "ok" }`.
 ---
 
 For more configuration options, see `docs/02-configuration.md` or the [Configuration Guide](mcp-prompts/docs/02-configuration.md).
+
+## Configuration
+
+MCP Prompts is configured via environment variables. Here are the most important options:
+
+| Variable        | Default        | Description                                  |
+| -------------- | -------------- | -------------------------------------------- |
+| `PORT`         | `3003`         | HTTP port                                    |
+| `STORAGE_TYPE` | `file`         | Storage backend: file, postgres, memory, etc.|
+| `PROMPTS_DIR`  | `./data/prompts`| Directory for prompt files                   |
+| `LOG_LEVEL`    | `info`         | Log level: debug, info, warn, error          |
+| `HTTP_SERVER`  | `true`         | Enable HTTP server                           |
+| `HOST`         | `localhost`    | Hostname                                     |
+
+For advanced options (Postgres, ElasticSearch, SSE, ElevenLabs, etc.), see the [full configuration guide](mcp-prompts/docs/02-configuration.md).
+
+All variables are validated at startup. If any required variable is missing or invalid, the server will print a clear error and exit.

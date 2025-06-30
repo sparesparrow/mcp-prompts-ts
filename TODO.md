@@ -37,7 +37,7 @@
 ### Fáze 6: Dokumentace
 - [x] Aktualizovat API dokumentaci
 - [x] Vytvořit příklady použití
-- [ ] Dokumentovat konfigurační možnosti
+- [x] Dokumentovat konfigurační možnosti
 - [ ] Vytvořit migrační průvodce
 
 ### Fáze 7: Testování
@@ -50,4 +50,6 @@
 
 > Lint autofix and code hygiene performed, API docs generated with TypeDoc. Proceeding to usage examples and configuration docs next.
 
-> Usage examples added to README.md. Next: document configuration options, referencing the configuration guide. 
+> Usage examples added to README.md. Next: document configuration options, referencing the configuration guide.
+
+> Configuration options summarized in README.md. Next: create a migration guide for users moving from the monorepo to the new multi-repo/meta-repo setup. 
