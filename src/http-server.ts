@@ -280,18 +280,14 @@ export async function startHttpServer(
    *       201:
    *         description: Prompt created
    */
-  app.put('/prompts/:id/:version', catchAsync(async (req, res, next) => {
-    const prompt = await services.promptService.updatePrompt(
-      req.params.id,
-      parseInt(req.params.version, 10),
-      req.body,
-    );
-    if (prompt) {
-      res.status(200).json({ prompt });
-    } else {
-      res.status(404).json({ error: 'Prompt not found' });
-    }
-  }));
+  app.post(
+    '/prompts',
+    catchAsync(async (req, res) => {
+      const validatedData = promptSchemas.create.parse(req.body);
+      const prompt = await promptService.createPrompt(validatedData);
+      res.status(201).json({ success: true, prompt });
+    }),
+  );
 
   /**
    * @openapi
@@ -404,11 +400,8 @@ export async function startHttpServer(
   app.post(
     '/prompts/bulk-create',
     catchAsync(async (req, res) => {
-      const { prompts } = req.body;
-      if (!Array.isArray(prompts)) {
-        throw new AppError('`prompts` must be an array', 400, HttpErrorCode.VALIDATION_ERROR);
-      }
-      const results = await services.promptService.createPromptsBulk(prompts);
+      const prompts = promptSchemas.bulkCreate.parse(req.body);
+      const results = await promptService.createPromptsBulk(prompts);
       const hasErrors = results.some(r => !r.success);
       res.status(hasErrors ? 207 : 201).json({ results });
     }),
@@ -533,13 +526,11 @@ export async function startHttpServer(
    *        description: Prompt not found
    */
   app.put(
-    '/prompts/:id/:version',
+    '/prompts/:id',
     catchAsync(async (req, res) => {
-      const { id } = req.params;
-      const version = parseInt(req.params.version, 10);
       const validatedData = promptSchemas.update.parse(req.body);
-      const prompt = await promptService.updatePrompt(id, version, validatedData);
-      res.status(200).json(prompt);
+      const updated = await promptService.updatePrompt(req.params.id, validatedData);
+      res.status(200).json({ success: true, prompt: updated });
     }),
   );
 

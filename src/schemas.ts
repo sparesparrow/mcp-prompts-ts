@@ -29,7 +29,17 @@ const createPromptSchema = z
       .trim()
       .max(500, { message: 'Description cannot be longer than 500 characters.' })
       .optional(),
-    isTemplate: z.boolean().optional().default(false),
+    isTemplate: z.preprocess(
+      (val) => {
+        if (val === null || val === undefined) return false;
+        if (typeof val === 'string') {
+          if (val.toLowerCase() === 'true') return true;
+          if (val.toLowerCase() === 'false') return false;
+        }
+        return val;
+      },
+      z.boolean().default(false),
+    ),
     metadata: z.record(z.unknown()).nullish(),
     name: z
       .string({
@@ -39,7 +49,17 @@ const createPromptSchema = z
       .trim()
       .min(1, { message: 'Name cannot be empty or just whitespace.' })
       .max(100, { message: 'Name cannot be longer than 100 characters.' }),
-    tags: z.array(z.string().min(1, { message: 'Tags cannot be empty strings.' })).nullish(),
+    tags: z.preprocess(
+      (val) => {
+        if (val === null || val === undefined || val === '') return [];
+        if (Array.isArray(val)) return val;
+        if (typeof val === 'string') {
+          return val.split(',').map((s) => s.trim()).filter(Boolean);
+        }
+        return [];
+      },
+      z.array(z.string().min(1, { message: 'Tags cannot be empty strings.' })).default([]),
+    ),
     variables: z.array(z.union([z.string(), templateVariableSchema])).nullish(),
   })
   .strict();
@@ -85,8 +105,27 @@ export const promptSchemas = {
 
   list: z.object({
     category: z.string().optional(),
-    isTemplate: z.boolean().optional(),
-    tags: z.array(z.string()).optional(),
+    isTemplate: z.preprocess(
+      (val) => {
+        if (typeof val === 'string') {
+          if (val.toLowerCase() === 'true') return true;
+          if (val.toLowerCase() === 'false') return false;
+        }
+        return val;
+      },
+      z.boolean().optional(),
+    ),
+    tags: z.preprocess(
+      (val) => {
+        if (Array.isArray(val)) return val;
+        if (typeof val === 'string') {
+          if (val.trim() === '') return [];
+          return val.split(',').map((s) => s.trim()).filter(Boolean);
+        }
+        return undefined;
+      },
+      z.array(z.string()).optional(),
+    ),
   }),
 
   /**
@@ -94,6 +133,9 @@ export const promptSchemas = {
    */
   update: createPromptSchema.partial(),
 
+  /**
+   * Schema for bulk creating prompts. Accepts an array of createPromptSchema.
+   */
   bulkCreate: z.array(createPromptSchema),
 
   bulkDelete: z.object({ ids: z.array(z.string().min(1)) }),

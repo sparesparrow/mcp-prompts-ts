@@ -70,7 +70,7 @@ describe('HTTP Server Integration', () => {
   it('should return health status', async () => {
     const res = await request(baseUrl).get('/health');
     expect(res.status).toBe(200);
-    expect(res.body.status).toBe('ok');
+    expect(res.text).toBe('OK');
   });
 
   it('should create and retrieve a prompt', async () => {
@@ -78,6 +78,7 @@ describe('HTTP Server Integration', () => {
       name: 'HTTP Test',
       content: 'Hello, HTTP!',
       isTemplate: false,
+      tags: ['test'],
     };
     const createRes = await request(baseUrl)
       .post('/prompts')
@@ -103,6 +104,7 @@ describe('HTTP Server Integration', () => {
       name: 'Update HTTP',
       content: 'Update me',
       isTemplate: false,
+      tags: ['test'],
     };
     const createRes = await request(baseUrl)
       .post('/prompts')
@@ -130,6 +132,7 @@ describe('HTTP Server Integration', () => {
       name: 'Delete HTTP',
       content: 'Delete me',
       isTemplate: false,
+      tags: ['test'],
     };
     const createRes = await request(baseUrl)
       .post('/prompts')
@@ -196,6 +199,7 @@ describe('HTTP Server Integration', () => {
       name: 'Dup HTTP',
       content: 'Dup content',
       isTemplate: false,
+      tags: ['test'],
     };
     const res1 = await request(baseUrl).post('/prompts').set('x-api-key', 'test-key').send(prompt);
     expect(res1.status).toBe(201);
@@ -226,14 +230,14 @@ describe('Prompt List (GET /prompts)', () => {
   beforeEach(async () => {
     await adapter.clearAll();
     const prompts = [
-      { name: 'A', content: 'A', tags: ['a', 'test'], category: 'general' },
-      { name: 'B', content: 'B', tags: ['b', 'test'], category: 'general' },
-      { name: 'C', content: 'C', tags: ['c'], category: 'other' },
-      { name: 'Find Me', content: 'The word is test' },
+      { name: 'A', content: 'A', tags: ['a', 'test'], category: 'general', isTemplate: false },
+      { name: 'B', content: 'B', tags: ['b', 'test'], category: 'general', isTemplate: false },
+      { name: 'C', content: 'C', tags: ['c'], category: 'other', isTemplate: false },
+      { name: 'Find Me', content: 'The word is test', tags: ['test'], isTemplate: false },
     ];
     for (const p of prompts) {
       await promptService.createPrompt({
-        isTemplate: false,
+        isTemplate: p.isTemplate,
         ...p,
       });
     }
@@ -321,8 +325,8 @@ describe('Prompt List (GET /prompts)', () => {
 describe('Bulk Prompt Operations', () => {
   beforeEach(async () => {
     await adapter.clearAll();
-    await promptService.createPrompt({ name: 'p1', content: 'c1', isTemplate: false });
-    await promptService.createPrompt({ name: 'p2', content: 'c2', isTemplate: false });
+    await promptService.createPrompt({ name: 'p1', content: 'c1', isTemplate: false, tags: ['test'] });
+    await promptService.createPrompt({ name: 'p2', content: 'c2', isTemplate: false, tags: ['test'] });
   });
 
   it('should bulk create prompts successfully, handling duplicates and invalids', async () => {
@@ -394,6 +398,7 @@ describe('Workflow Engine Integration', () => {
       content: 'The capital of {{country}} is Paris.',
       isTemplate: true,
       variables: ['country'],
+      tags: ['test'],
     });
   });
 
@@ -447,6 +452,7 @@ function makePromptPayload(overrides: Partial<Record<string, any>> = {}) {
     version: 1,
     createdAt: now,
     updatedAt: now,
+    tags: ['test'],
     ...overrides,
   };
 }

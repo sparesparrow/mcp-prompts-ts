@@ -9,7 +9,6 @@
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, Server as HttpServer, ServerResponse } from 'node:http';
 import { promisify } from 'node:util';
-import { gzip, deflate, brotliCompress } from 'zlib/promises';
 
 import type * as SDKServerTypes from '@modelcontextprotocol/sdk/dist/esm/server/index.js';
 import type * as SDKTransportTypes from '@modelcontextprotocol/sdk/dist/esm/shared/transport.js';
@@ -682,6 +681,10 @@ export class SseManager extends EventEmitter {
           if (this._options.autoSelectCompression) {
             algorithm = this.selectBestCompressionAlgorithm(data);
           }
+
+          const { gzip } = await import('zlib/promises');
+          const { deflate } = await import('zlib/promises');
+          const { brotliCompress } = await import('zlib/promises');
 
           switch (algorithm) {
             case 'gzip':
