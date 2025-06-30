@@ -660,9 +660,20 @@ export async function startHttpServer(
     }),
   );
 
+  // Express middleware for workflow rate limiting
+  function workflowRateLimiter(req: express.Request, res: express.Response, next: express.NextFunction) {
+    // Extract userId from request (body, query, or headers as appropriate)
+    const userId = req.body?.userId || req.query?.userId || req.header('x-user-id') || 'anonymous';
+    const rateLimiter = getWorkflowRateLimiter();
+    if (!rateLimiter(userId)) {
+      return res.status(429).json({ error: 'Rate limit exceeded' });
+    }
+    next();
+  }
+
   app.post(
     '/workflows/:id/execute',
-    getWorkflowRateLimiter(),
+    workflowRateLimiter,
     catchAsync(async (req, res, next) => {
       const { id } = req.params;
       const version = req.query.version ? parseInt(req.query.version as string, 10) : undefined;
@@ -754,7 +765,7 @@ export async function startHttpServer(
   });
 
   // Global error handler middleware
-  function errorHandler(err: any, req: express.Request, res: express.Response, next: express.NextFunction) {
+  const errorHandler: express.ErrorRequestHandler = (err, req, res, next) => {
     console.error(err);
     if (err instanceof z.ZodError) {
       return res.status(400).json({
@@ -780,6 +791,18 @@ export async function startHttpServer(
         message: 'An unexpected error occurred',
       },
     });
-  }
+  };
   app.use(errorHandler);
+
+  // Ensure the function always returns a Promise<http.Server>
+  // If a server instance is provided, return it; otherwise, start a new server
+  if (server) {
+    return Promise.resolve(server);
+  }
+  return new Promise((resolve) => {
+    const srv = app.listen(config.port, config.host, () => {
+      console.log(`Server listening on http://${config.host}:${config.port}`);
+      resolve(srv);
+    });
+  });
 }
