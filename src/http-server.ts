@@ -764,8 +764,8 @@ export async function startHttpServer(
     });
   });
 
-  // Global error handler middleware
-  const errorHandler: express.ErrorRequestHandler = (err, req, res, next) => {
+  // Global error handler middleware (must be at module level for export)
+  export const errorHandler: express.ErrorRequestHandler = (err, req, res, next) => {
     console.error(err);
     if (err instanceof z.ZodError) {
       res.status(400).json({
@@ -808,5 +808,3 @@ export async function startHttpServer(
     });
   });
 }
-
-export { errorHandler };
