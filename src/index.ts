@@ -32,6 +32,8 @@ async function main() {
     }),
   });
 
+  const allowedStorageTypes = ['file', 'postgres', 'memory'];
+  const storageType = allowedStorageTypes.includes(env.STORAGE_TYPE) ? env.STORAGE_TYPE : 'file';
   const config = {
     ...env,
     storage: {
@@ -42,7 +44,7 @@ async function main() {
       port: env.POSTGRES_PORT,
       promptsDir: env.PROMPTS_DIR,
       ssl: env.POSTGRES_SSL,
-      type: env.STORAGE_TYPE,
+      type: storageType,
       user: env.POSTGRES_USER,
     },
   };
