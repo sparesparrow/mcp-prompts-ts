@@ -526,10 +526,11 @@ export async function startHttpServer(
    *        description: Prompt not found
    */
   app.put(
-    '/prompts/:id',
+    '/prompts/:id/:version',
     catchAsync(async (req, res) => {
       const validatedData = promptSchemas.update.parse(req.body);
-      const updated = await promptService.updatePrompt(req.params.id, validatedData);
+      const version = parseInt(req.params.version, 10);
+      const updated = await promptService.updatePrompt(req.params.id, version, validatedData);
       res.status(200).json({ success: true, prompt: updated });
     }),
   );

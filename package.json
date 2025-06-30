@@ -2,10 +2,16 @@
   "name": "@sparesparrow/mcp-prompts",
   "version": "3.0.2",
   "description": "A standalone server for managing and serving prompts for the Model Context Protocol (MCP)",
-  "main": "dist/index.mjs",
+  "main": "dist/cjs/src/index.js",
   "type": "module",
   "bin": {
-    "mcp-prompts": "dist/index.mjs"
+    "mcp-prompts": "dist/cjs/src/index.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/esm/src/index.js",
+      "require": "./dist/cjs/src/index.js"
+    }
   },
   "files": [
     "dist",
@@ -24,7 +30,8 @@
     "test": "bash scripts/run-tests.sh --unit",
     "lint": "eslint \"src/**/*.ts\" && prettier --check .",
     "validate:prompts": "ts-node src/scripts/validate-prompts.ts",
-    "build": "node build.mjs",
+    "build": "tsc --project tsconfig.json && tsc --project tsconfig.cjs.json && tsc --project tsconfig.esm.json && npm run postbuild",
+    "postbuild": "shx mkdir -p dist/cjs/src/types dist/esm/src/types && shx cp -r src/types/* dist/cjs/src/types/ && shx cp -r src/types/* dist/esm/src/types/",
     "prepare": "npm run build",
     "watch": "tsc --watch",
     "clean": "rimraf dist",
@@ -59,6 +66,7 @@
     "@elastic/elasticsearch": "^9.0.2",
     "@modelcontextprotocol/sdk": "^1.13.2",
     "@modelcontextprotocol/server-postgres": "0.6.2",
+    "@sparesparrow/mcp-prompts": "^3.0.2",
     "@sparesparrow/mcp-prompts-catalog": "^0.1.0",
     "@sparesparrow/mcp-prompts-contracts": "^0.1.0",
     "ajv": "^8.17.1",

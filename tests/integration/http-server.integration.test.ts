@@ -237,7 +237,6 @@ describe('Prompt List (GET /prompts)', () => {
     ];
     for (const p of prompts) {
       await promptService.createPrompt({
-        isTemplate: p.isTemplate,
         ...p,
       });
     }
