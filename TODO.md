@@ -35,8 +35,8 @@
 - [x] Přidat repository_dispatch event na meta-repo
 
 ### Fáze 6: Dokumentace
-- [ ] Aktualizovat API dokumentaci
-- [ ] Vytvořit příklady použití
+- [x] Aktualizovat API dokumentaci
+- [x] Vytvořit příklady použití
 - [ ] Dokumentovat konfigurační možnosti
 - [ ] Vytvořit migrační průvodce
 
@@ -44,4 +44,10 @@
 - [ ] Spustit kompletní test suite
 - [ ] Otestovat integraci s novými balíčky
 - [ ] Validovat Docker image
-- [ ] Otestovat produkční deployment 
+- [ ] Otestovat produkční deployment
+
+---
+
+> Lint autofix and code hygiene performed, API docs generated with TypeDoc. Proceeding to usage examples and configuration docs next.
+
+> Usage examples added to README.md. Next: document configuration options, referencing the configuration guide. 
