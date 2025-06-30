@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 console.log('Starting MCP Prompts Server...');
 
-import McpServer from '@modelcontextprotocol/sdk/dist/esm/server/mcp.js';
+import { McpServer } from '@modelcontextprotocol/sdk/dist/esm/server/mcp.js';
 // import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse';
 // import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp';
 import { pino } from 'pino';

@@ -20,5 +20,6 @@ declare module '@modelcontextprotocol/sdk/dist/esm/shared/transport' {
 // Allows TypeScript to resolve types for the ESM import with .js extension
 
 declare module '@modelcontextprotocol/sdk/dist/esm/server/mcp.js' {
-  export * from '@modelcontextprotocol/sdk/dist/esm/server/mcp.d.ts';
+  import { McpServer } from '@modelcontextprotocol/sdk/dist/esm/server/mcp.d.ts';
+  export { McpServer };
 } 
