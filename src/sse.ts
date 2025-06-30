@@ -13,9 +13,9 @@ import { gzip, deflate, brotliCompress } from 'zlib/promises';
 
 import * as SDKServer from '@modelcontextprotocol/sdk/dist/esm/server/index.js';
 import * as SDKSSE from '@modelcontextprotocol/sdk/dist/esm/server/sse.js';
-import type { Server } from '@modelcontextprotocol/sdk/dist/esm/server/index.d.ts';
-import type { SSEServerTransport } from '@modelcontextprotocol/sdk/dist/esm/server/sse.d.ts';
-import type { Transport } from '@modelcontextprotocol/sdk/dist/esm/shared/transport.d.ts';
+import type { Server } from '@modelcontextprotocol/sdk/dist/esm/server/index.js';
+import type { SSEServerTransport } from '@modelcontextprotocol/sdk/dist/esm/server/sse.js';
+import type { Transport } from '@modelcontextprotocol/sdk/dist/esm/shared/transport.js';
 import { EventEmitter } from 'events';
 import { Express, Request, Response } from 'express';
 import { pino } from 'pino';
