@@ -7,7 +7,7 @@ import type { NextFunction, Request, Response } from 'express';
 
 import { closeServer } from '../../tests/setup.js';
 import { AppError, HttpErrorCode } from '../errors.js';
-import { errorHandler, startHttpServer } from '../http-server';
+import { errorHandler, startHttpServer } from '../http-server.js';
 import type { Prompt } from '../interfaces.js';
 import type { PromptService } from '../prompt-service.js';
 import type { SequenceService } from '../sequence-service.js';
