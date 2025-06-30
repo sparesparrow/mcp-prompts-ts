@@ -22,4 +22,20 @@ declare module '@modelcontextprotocol/sdk/dist/esm/shared/transport' {
 declare module '@modelcontextprotocol/sdk/dist/esm/server/mcp.js' {
   import { McpServer } from '@modelcontextprotocol/sdk/dist/esm/server/mcp.d.ts';
   export { McpServer };
+}
+
+declare module '@modelcontextprotocol/sdk/dist/esm/server/index.js' {
+  export * from '@modelcontextprotocol/sdk/dist/esm/server/index.d.ts';
+}
+declare module '@modelcontextprotocol/sdk/dist/esm/server/sse.js' {
+  export * from '@modelcontextprotocol/sdk/dist/esm/server/sse.d.ts';
+}
+declare module '@modelcontextprotocol/sdk/dist/esm/shared/transport.js' {
+  export * from '@modelcontextprotocol/sdk/dist/esm/shared/transport.d.ts';
+}
+declare module 'zlib/promises' {
+  import { BrotliCompress, Deflate, Gzip } from 'zlib';
+  export function gzip(buffer: Buffer | string): Promise<Buffer>;
+  export function deflate(buffer: Buffer | string): Promise<Buffer>;
+  export function brotliCompress(buffer: Buffer | string): Promise<Buffer>;
 } 
