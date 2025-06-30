@@ -62,10 +62,10 @@ export class SequenceServiceImpl implements SequenceService {
     }
 
     const prompts = await Promise.all(
-      sequence.promptIds.map(promptId => this.storage.getPrompt(promptId)),
+      sequence.promptIds.map((promptId: string) => this.storage.getPrompt(promptId)),
     );
 
-    const foundPrompts = prompts.filter((p): p is Prompt => p !== null);
+    const foundPrompts = prompts.filter((p: Prompt | null): p is Prompt => p !== null);
 
     if (foundPrompts.length !== sequence.promptIds.length) {
       console.warn(`Some prompts for sequence ${id} were not found.`);

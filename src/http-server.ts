@@ -174,7 +174,7 @@ const swaggerSpec = swaggerJSDoc(swaggerOptions);
  * Reads valid API keys from process.env.API_KEYS (comma-separated)
  * Skips /health and /api-docs endpoints
  */
-const apiKeyAuth: express.RequestHandler = (req, res, next) => {
+function apiKeyAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
   const openPaths = ['/health', '/api-docs'];
   if (openPaths.some(path => req.path.startsWith(path))) {
     return next();
@@ -185,10 +185,11 @@ const apiKeyAuth: express.RequestHandler = (req, res, next) => {
     .filter(Boolean);
   const key = req.header('x-api-key');
   if (!key || !apiKeys.includes(key)) {
-    return res.status(401).json({ error: 'Unauthorized: missing or invalid API key' });
+    res.status(401).json({ error: 'Unauthorized: missing or invalid API key' });
+    return;
   }
   next();
-};
+}
 
 /**
  *
@@ -753,7 +754,7 @@ export async function startHttpServer(
   });
 
   // Global error handler middleware
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  function errorHandler(err: any, req: express.Request, res: express.Response, next: express.NextFunction) {
     console.error(err);
     if (err instanceof z.ZodError) {
       return res.status(400).json({
@@ -779,5 +780,6 @@ export async function startHttpServer(
         message: 'An unexpected error occurred',
       },
     });
-  });
+  }
+  app.use(errorHandler);
 }

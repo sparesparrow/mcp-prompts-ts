@@ -3,8 +3,8 @@ import type {
   StorageAdapter,
   ApplyTemplateResult,
   Prompt,
-} from '@sparesparrow/mcp-prompts-contracts';
-import { promptSchemas } from '@sparesparrow/mcp-prompts-contracts/dist/schemas';
+} from './types/manual-exports.js';
+import { promptSchemas } from './types/manual-exports.js';
 
 import type {
   CreatePromptParams,
@@ -29,10 +29,10 @@ function validateTemplateVariables(prompt: Pick<Prompt, 'content' | 'isTemplate'
   }
 
   const templateVariables = new Set(
-    (prompt.content.match(/{{(.*?)}}/g) || []).map(v => v.replace(/{{|}}/g, '').trim()),
+    (prompt.content.match(/{{(.*?)}}/g) || []).map((v: string) => v.replace(/{{|}}/g, '').trim()),
   );
 
-  const declaredVariables = new Set(prompt.variables?.map(v => (typeof v === 'string' ? v : v.name)));
+  const declaredVariables = new Set(prompt.variables?.map((v: string | { name: string }) => (typeof v === 'string' ? v : v.name)));
 
   if (templateVariables.size !== declaredVariables.size) {
     throw new ValidationError(
