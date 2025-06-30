@@ -84,39 +84,27 @@ export class PromptService {
    * If an ID is provided and it already exists, this will create a new version of that prompt.
    * If no ID is provided, a new one will be generated from the name.
    */
-  public async createPrompt(args: CreatePromptParams): Promise<Prompt> {
-    try {
-      promptSchemas.create.parse(args);
-    } catch (error: any) {
-      throw new ValidationError(`Invalid prompt data: ${error.message}`, error.issues);
-    }
-
-    validateTemplateVariables({
-      content: args.content,
-      isTemplate: args.isTemplate ?? false,
-      variables: args.variables ?? [],
-    });
-
-    const promptId = args.id ?? this.generateId(args.name);
-    const existingByName = await this.storage.getPrompt(promptId);
-    if (existingByName) {
-      throw new DuplicateError(`Prompt with name '${args.name}' already exists.`);
-    }
-
-    const versions = await this.storage.listPromptVersions(promptId);
-    const newVersion = versions.length > 0 ? Math.max(...versions) + 1 : 1;
-
-    const newPrompt: Prompt = {
-      ...args,
-      id: promptId,
-      version: newVersion,
+  public async createPrompt(promptData: CreatePromptParams): Promise<Prompt> {
+    const data: Prompt = {
+      id: promptData.id ?? this.generateId(promptData.name),
+      name: promptData.name,
+      content: promptData.content,
+      isTemplate: Boolean(promptData.isTemplate),
+      description: promptData.description,
+      category: promptData.category,
+      metadata: promptData.metadata,
+      tags: promptData.tags,
+      variables: promptData.variables,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      version: 1
     };
-
-    const result = await this.storage.savePrompt(newPrompt);
-    await this.invalidatePromptCache(result.id);
-    return result;
+    if (!data.name || !data.content) {
+      throw new Error('Name and content are required fields');
+    }
+    const prompt = await this.storage.savePrompt(data);
+    await this.invalidatePromptCache(prompt.id);
+    return prompt;
   }
 
   private generateId(name: string): string {
@@ -156,6 +144,9 @@ export class PromptService {
     version: number,
     args: Omit<UpdatePromptParams, 'id' | 'version'>,
   ): Promise<Prompt> {
+    if ('metadata' in args && args.metadata === null) {
+      delete (args as any).metadata;
+    }
     const existingPrompt = await this.getPrompt(id, version);
     if (!existingPrompt) {
       throw new NotFoundError(`Prompt not found: ${id} v${version}`);

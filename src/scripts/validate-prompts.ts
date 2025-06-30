@@ -20,6 +20,7 @@ import { promptSchemas } from '../types/manual-exports.js';
 
 import { FileAdapter } from '../adapters.js';
 import { PromptService } from '../prompt-service.js';
+import { StorageAdapter } from '../adapters';
 
 // resolve __dirname for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -132,8 +133,10 @@ async function main() {
     path.join(baseDir, 'fixed_prompts'),
     path.join(baseDir, 'data', 'prompts'),
   ];
-  // Use FileAdapter with string path
-  const fileAdapter = new FileAdapter({ promptsDir: './prompts' });
+  // Initialize services
+  const fileAdapter: StorageAdapter = new FileAdapter({
+    promptsDir: path.join(process.cwd(), 'data', 'prompts')
+  });
   const promptService = new PromptService(fileAdapter);
   let success = true;
   for (const dir of targetDirs) {

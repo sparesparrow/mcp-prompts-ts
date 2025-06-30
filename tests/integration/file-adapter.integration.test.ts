@@ -227,4 +227,66 @@ describe.skip('FileAdapter Integration Tests', () => {
       expect(prompts.find((p: Prompt) => p.id === 'invalid-schema-prompt')).toBeUndefined();
     });
   });
+
+  describe('Concurrency Control', () => {
+    it('should handle concurrent prompt saves without data corruption', async () => {
+      const promptData = {
+        name: 'Concurrent Test',
+        content: 'Initial content',
+      };
+      // Simulate 5 concurrent saves
+      const results = await Promise.all(
+        Array.from({ length: 5 }).map(() =>
+          (adapter as any).savePrompt(promptData)
+        )
+      );
+      // All should have the same id, but different versions
+      const ids = results.map((p: any) => p.id);
+      expect(new Set(ids).size).toBe(1);
+      const versions = results.map((p: any) => p.version);
+      expect(new Set(versions).size).toBe(5);
+    });
+
+    it('should handle concurrent sequence saves without data corruption', async () => {
+      const sequenceBase = {
+        id: 'concurrent-sequence',
+        steps: [{ promptId: 'step1', input: {} }],
+      };
+      // Simulate 3 concurrent saves with different steps
+      await Promise.all(
+        [1, 2, 3].map(i =>
+          (adapter as any).saveSequence({
+            ...sequenceBase,
+            steps: [{ promptId: `step${i}`, input: {} }],
+          })
+        )
+      );
+      // Only the last write should persist
+      const sequence = await (adapter as any).getSequence('concurrent-sequence');
+      expect(sequence).toBeDefined();
+      expect(['step1', 'step2', 'step3']).toContain(sequence.steps[0].promptId);
+    });
+
+    it('should handle concurrent workflow state saves without data corruption', async () => {
+      const stateBase = {
+        executionId: 'concurrent-workflow',
+        workflowId: 'wf1',
+        state: 'running',
+        context: {},
+      };
+      // Simulate 4 concurrent saves with different states
+      await Promise.all(
+        ['running', 'paused', 'completed', 'failed'].map(state =>
+          (adapter as any).saveWorkflowState({
+            ...stateBase,
+            state,
+          })
+        )
+      );
+      // Only the last write should persist
+      const workflowState = await (adapter as any).getWorkflowState('concurrent-workflow');
+      expect(workflowState).toBeDefined();
+      expect(['running', 'paused', 'completed', 'failed']).toContain(workflowState.state);
+    });
+  });
 });

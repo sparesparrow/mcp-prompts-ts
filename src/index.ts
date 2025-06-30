@@ -6,6 +6,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 // import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp';
 import { pino } from 'pino';
 import { z } from 'zod';
+import http from 'http';
 
 import { adapterFactory } from './adapters.js';
 import { loadConfig } from './config.js';
@@ -80,55 +81,75 @@ async function main() {
     version: '1.3.0',
   });
 
-  await startHttpServer(
-    mcpServer,
-    {
-      corsOrigin: env.CORS_ORIGIN,
-      enableSSE: env.ENABLE_SSE,
-      host: env.HOST,
-      port: env.PORT,
-      ssePath: env.SSE_PATH,
-    },
-    {
-      elevenLabsService,
-      promptService,
-      sequenceService,
-      storageAdapters: [storageAdapter],
-      workflowService,
-    },
-  );
+  let httpServer: http.Server;
+  try {
+    httpServer = await startHttpServer(
+      mcpServer,
+      {
+        corsOrigin: env.CORS_ORIGIN,
+        enableSSE: env.ENABLE_SSE,
+        host: env.HOST,
+        port: env.PORT,
+        ssePath: env.SSE_PATH,
+      },
+      {
+        elevenLabsService,
+        promptService,
+        sequenceService,
+        storageAdapters: [storageAdapter],
+        workflowService,
+      },
+    );
 
-  // mcpServer.tool('list_prompts', 'List available prompts', z.object({}), z.object({}), async () => {
-  //   const prompts = await promptService.listPrompts({});
-  //   return { structuredContent: prompts };
-  // });
+    logger.info(`MCP Prompts server started on ${env.HOST}:${env.PORT}`);
 
-  // mcpServer.tool(
-  //   'get_prompt',
-  //   'Get a specific prompt by ID',
-  //   z.object({ id: z.string() }),
-  //   z.object({}),
-  //   async (args: { id: string }) => {
-  //     const prompt = await promptService.getPrompt(args.id);
-  //     return { structuredContent: prompt };
-  //   },
-  // );
+    // Keep the event loop alive
+    const keepAlive = setInterval(() => {}, 1000);
 
-  logger.info(`MCP Prompts server started on ${env.HOST}:${env.PORT}`);
+    /**
+     * Graceful shutdown handler
+     */
+    async function shutdown() {
+      logger.info('Shutting down MCP Prompts server...');
+      clearInterval(keepAlive);
+      await mcpServer.close();
+      await new Promise<void>((resolve) => {
+        if (httpServer.listening) {
+          httpServer.close(() => resolve());
+        } else {
+          resolve();
+        }
+      });
+      await storageAdapter.disconnect();
+      logger.info('Server shut down gracefully.');
+      process.exit(0);
+    }
 
-  /**
-   *
-   */
-  async function shutdown() {
-    logger.info('Shutting down MCP Prompts server...');
-    await mcpServer.close();
-    await storageAdapter.disconnect();
-    logger.info('Server shut down gracefully.');
-    process.exit(0);
+    // Handle process signals
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
+
+    // Handle uncaught errors
+    process.on('uncaughtException', (error) => {
+      logger.error('Uncaught exception:', error);
+      shutdown().catch((err) => {
+        logger.error('Error during shutdown:', err);
+        process.exit(1);
+      });
+    });
+
+    process.on('unhandledRejection', (reason) => {
+      logger.error('Unhandled rejection:', reason);
+      shutdown().catch((err) => {
+        logger.error('Error during shutdown:', err);
+        process.exit(1);
+      });
+    });
+
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
   }
-
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
 }
 
 main().catch(error => {

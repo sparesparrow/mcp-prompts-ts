@@ -43,23 +43,11 @@ export interface Prompt {
   /** Human-readable name of the prompt */
   name: string;
 
-  /** Optional description of the prompt */
-  description?: string;
-
   /** The actual prompt content */
   content: string;
 
   /** Whether this is a template prompt */
-  isTemplate?: boolean;
-
-  /** For templates, the list of variables */
-  variables?: string[] | TemplateVariable[];
-
-  /** Tags for categorization and filtering */
-  tags?: string[];
-
-  /** Primary category for organization */
-  category?: string;
+  isTemplate: boolean;
 
   /** Date when the prompt was created (ISO string) */
   createdAt: string;
@@ -68,10 +56,29 @@ export interface Prompt {
   updatedAt: string;
 
   /** Version number, incremented on updates */
-  version?: number;
+  version: number;
+
+  /** Optional description of the prompt */
+  description?: string;
+
+  /** Primary category for organization */
+  category?: string;
 
   /** Optional metadata for additional information */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
+
+  /** Tags for categorization and filtering */
+  tags?: string[];
+
+  /** For templates, the list of variables */
+  variables?: (string | {
+    name: string;
+    description?: string;
+    default?: string;
+    required?: boolean;
+    type?: "string" | "number" | "boolean" | "object" | "array";
+    options?: string[];
+  })[];
 }
 
 /**
@@ -294,9 +301,10 @@ export interface CreatePromptParams {
   description?: string;
   content: string;
   tags?: string[];
-  isTemplate?: boolean;
+  isTemplate: boolean;
   variables?: string[] | TemplateVariable[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
+  category?: string;
 }
 
 export interface UpdatePromptParams {
@@ -304,10 +312,11 @@ export interface UpdatePromptParams {
   name?: string;
   description?: string;
   content?: string;
-  tags?: string[];
+  tags?: string[] | null;
   isTemplate?: boolean;
-  variables?: string[] | TemplateVariable[];
-  metadata?: Record<string, any>;
+  variables?: string[] | TemplateVariable[] | null;
+  metadata?: Record<string, unknown> | null;
+  category?: string;
 }
 
 export interface ListPromptsParams {

@@ -25,6 +25,7 @@ import {
 } from './workflow-service.js';
 import type { StorageAdapter } from './types/manual-exports.js';
 import { promptSchemas } from './types/manual-exports.js';
+import { Prompt, CreatePromptParams, UpdatePromptParams } from './interfaces';
 
 // Global error handler middleware (must be at module level for export)
 export const errorHandler: express.ErrorRequestHandler = (err, req, res, next) => {
@@ -200,6 +201,49 @@ const swaggerOptions = {
 };
 const swaggerSpec = swaggerJSDoc(swaggerOptions);
 
+// Helper function to sanitize prompt data for creation
+const sanitizePromptData = (data: any): CreatePromptParams => ({
+  name: typeof data.name === 'string' ? data.name : '',
+  content: typeof data.content === 'string' ? data.content : '',
+  isTemplate: Boolean(data.isTemplate),
+  tags: Array.isArray(data.tags) ? data.tags : undefined,
+  metadata: (typeof data.metadata === 'object' && data.metadata !== null) ? data.metadata : undefined,
+  variables: Array.isArray(data.variables) ? data.variables : undefined,
+  category: typeof data.category === 'string' ? data.category : undefined,
+  description: typeof data.description === 'string' ? data.description : undefined
+});
+
+// Utility type to ensure metadata is never null
+type NoNullMetadata<T> = Omit<T, 'metadata'> & { metadata?: Record<string, unknown> };
+
+const isStringArray = (arr: any[]): arr is string[] => arr.every(v => typeof v === 'string');
+const isTemplateVariableArray = (arr: any[]): arr is { name: string }[] => arr.every(v => typeof v === 'object' && v !== null && typeof v.name === 'string');
+
+const sanitizeUpdatePromptData = (data: any): NoNullMetadata<Omit<UpdatePromptParams, 'id' | 'version'>> => {
+  const result: any = {
+    name: typeof data.name === 'string' ? data.name : undefined,
+    content: typeof data.content === 'string' ? data.content : undefined,
+    isTemplate: typeof data.isTemplate === 'boolean' ? data.isTemplate : undefined,
+    category: typeof data.category === 'string' ? data.category : undefined,
+    description: typeof data.description === 'string' ? data.description : undefined
+  };
+  if (Array.isArray(data.tags)) {
+    result.tags = data.tags;
+  }
+  if (!Array.isArray(result.tags)) {
+    delete result.tags;
+  }
+  if (Array.isArray(data.variables)) {
+    if (isStringArray(data.variables) || isTemplateVariableArray(data.variables)) {
+      result.variables = data.variables;
+    }
+  }
+  if (typeof data.metadata === 'object' && data.metadata !== null) {
+    result.metadata = data.metadata;
+  }
+  return result;
+};
+
 /**
  * API key authentication middleware
  * Reads valid API keys from process.env.API_KEYS (comma-separated)
@@ -221,6 +265,26 @@ function apiKeyAuth(req: express.Request, res: express.Response, next: express.N
   }
   next();
 }
+
+// Helper function to handle errors
+const handleError = (error: any, res: Response) => {
+  console.error(error);
+  if (error instanceof Error) {
+    res.status(500).json({
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: error.message
+      }
+    });
+  } else {
+    res.status(500).json({
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'An unexpected error occurred'
+      }
+    });
+  }
+};
 
 /**
  *
@@ -265,29 +329,49 @@ export async function startHttpServer(
 
   // --- Prompts ---
 
-  /**
-   * @openapi
-   * /prompts:
-   *   post:
-   *     summary: Create a new prompt
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/Prompt'
-   *     responses:
-   *       201:
-   *         description: Prompt created
-   */
-  app.post(
-    '/prompts',
-    catchAsync(async (req, res) => {
-      const validatedData = promptSchemas.create.parse(req.body);
+  // Create prompt handler
+  app.post('/api/v1/prompts', async (req: Request, res: Response) => {
+    try {
+      const validatedData = sanitizePromptData(req.body);
       const prompt = await promptService.createPrompt(validatedData);
-      res.status(201).json({ success: true, prompt });
-    }),
-  );
+      res.status(201).json(prompt);
+    } catch (error) {
+      handleError(error, res);
+    }
+  });
+
+  // Create prompts bulk handler
+  app.post('/api/v1/prompts/bulk', async (req: Request, res: Response) => {
+    try {
+      const prompts = req.body.map(sanitizePromptData);
+      const results = await promptService.createPromptsBulk(prompts);
+      res.status(201).json(results);
+    } catch (error) {
+      handleError(error, res);
+    }
+  });
+
+  // Update prompt handler
+  app.patch('/api/v1/prompts/:id', async (req: Request, res: Response) => {
+    try {
+      const version = parseInt(req.query.version as string, 10);
+      if (isNaN(version)) {
+        throw new Error('Version parameter is required and must be a number');
+      }
+      let validatedData = sanitizeUpdatePromptData(req.body);
+      if ('metadata' in validatedData && (validatedData.metadata === null || typeof validatedData.metadata !== 'object')) {
+        delete (validatedData as any).metadata;
+      }
+      const updated = await promptService.updatePrompt(
+        req.params.id,
+        version,
+        validatedData as Omit<UpdatePromptParams, 'id' | 'version'>
+      );
+      res.json(updated);
+    } catch (error) {
+      handleError(error, res);
+    }
+  });
 
   /**
    * @openapi
@@ -364,46 +448,6 @@ export async function startHttpServer(
     catchAsync(async (req: express.Request, res: express.Response, next: express.NextFunction) => {
       const versions = await services.promptService.listPromptVersions(req.params.id);
       res.json({ success: true, id: req.params.id, versions });
-    }),
-  );
-
-  /**
-   * @openapi
-   * /prompts/bulk-create:
-   *   post:
-   *     summary: Bulk create prompts
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: array
-   *             items:
-   *               $ref: '#/components/schemas/Prompt'
-   *     responses:
-   *       207:
-   *         description: Array of results for each prompt
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: array
-   *               items:
-   *                 type: object
-   *                 properties:
-   *                   success:
-   *                     type: boolean
-   *                   id:
-   *                     type: string
-   *                   error:
-   *                     type: string
-   */
-  app.post(
-    '/prompts/bulk-create',
-    catchAsync(async (req, res) => {
-      const prompts = promptSchemas.bulkCreate.parse(req.body);
-      const results = await promptService.createPromptsBulk(prompts);
-      const hasErrors = results.some(r => !r.success);
-      res.status(hasErrors ? 207 : 201).json({ results });
     }),
   );
 
@@ -794,10 +838,25 @@ export async function startHttpServer(
   if (server) {
     return Promise.resolve(server);
   }
-  return new Promise((resolve) => {
-    const srv = app.listen(config.port, config.host, () => {
-      console.log(`Server listening on http://${config.host}:${config.port}`);
+
+  return new Promise((resolve, reject) => {
+    const srv = http.createServer(app);
+
+    srv.on('error', (error: NodeJS.ErrnoException) => {
+      console.error('Server error:', error);
+      if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${config.port} is already in use`);
+      }
+      reject(error);
+    });
+
+    srv.on('listening', () => {
+      const addr = srv.address();
+      const boundAddress = typeof addr === 'string' ? addr : `${addr?.address}:${addr?.port}`;
+      console.log(`Server is now listening on ${boundAddress}`);
       resolve(srv);
     });
+
+    srv.listen(config.port, config.host);
   });
 }

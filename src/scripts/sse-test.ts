@@ -65,22 +65,18 @@ function createSseClient(url: string, onMessage: (event: EventSourceEvent) => vo
   const source = new EventSource(url);
 
   // Set up event listeners
-  source.onmessage = (event: EventSourceEvent) => {
-    console.log(`Received message: ${event.data}`);
-    onMessage(event);
-  };
-
-  // Other events
-  source.addEventListener('connected', (event: EventSourceEvent) => {
-    console.log(`Connected: ${event.data}`);
-    onMessage(event);
+  source.addEventListener('message', (event: MessageEvent) => {
+    console.log('Received message:', event.data);
   });
 
-  // Error handling
-  source.onerror = (ev: Event) => {
-    // Optionally, log or handle the error event
-    console.error('SSE connection error:', ev);
-  };
+  source.addEventListener('error', (event: Event) => {
+    console.error('Error:', event);
+  });
+
+  // Custom event listener for 'connected' event
+  source.addEventListener('connected' as string, (event: Event) => {
+    console.log('Connected:', (event as MessageEvent).data);
+  });
 
   return source;
 }

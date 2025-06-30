@@ -46,7 +46,19 @@
 - [ ] Validovat Docker image
 - [ ] Otestovat produkční deployment
 
+### Fáze 8: Package Fixes & Stability
+- [x] Remove circular dependency on @sparesparrow/mcp-prompts
+- [x] Fix module/commonjs configuration
+- [x] Update interfaces to match contracts package
+- [ ] Update deprecated dependencies
+- [ ] Add proper peer dependencies
+- [ ] Improve error handling for missing optional dependencies
+- [ ] Add comprehensive module resolution tests
+- [ ] Update Docker build process for better dependency handling
+
 ---
+
+> Package.json has been updated to remove circular dependency and fix module configuration. TypeScript configuration has been updated to properly handle ESM/CommonJS modules. Interfaces have been updated to match the contracts package. Next: update deprecated dependencies and add proper peer dependencies.
 
 > Lint autofix and code hygiene performed, API docs generated with TypeDoc. Proceeding to usage examples and configuration docs next.
 

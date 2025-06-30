@@ -755,11 +755,9 @@ export class PostgresAdapter implements StorageAdapter {
     return res.rows[0]?.id || null;
   }
 
-  private extractVariableNames(variables: string[] | { name: string }[] | undefined): string[] {
-    if (!variables) {
-      return [];
-    }
-    return variables.map(v => (typeof v === 'string' ? v : v.name));
+  private extractVariableNames(variables?: (string | { name: string; description?: string; default?: string; required?: boolean; type?: "string" | "number" | "boolean" | "object" | "array"; options?: string[]; })[]): string[] {
+    if (!variables) return [];
+    return variables.map(v => typeof v === 'string' ? v : v.name);
   }
 
   public async savePrompt(prompt: Prompt): Promise<Prompt> {
