@@ -49,6 +49,23 @@ This starts a development server with hot-reloading on port 3004.
 
 This sets up multiple MCP servers for integration.
 
+### 5. Build Docker Images Manually
+
+If you want to build Docker images manually, use the Dockerfiles in the `docker/` directory:
+
+- For development:
+  ```bash
+  cd mcp-prompts-ts
+  docker build -f docker/Dockerfile.development -t mcp-prompts:dev .
+  docker run -p 3003:3003 mcp-prompts:dev
+  ```
+- For production:
+  ```bash
+  cd mcp-prompts-ts
+  docker build -f docker/Dockerfile.prod -t mcp-prompts:prod .
+  docker run -p 3003:3003 mcp-prompts:prod
+  ```
+
 ## Useful Commands
 
 ### Checking Server Status
@@ -113,6 +130,21 @@ LOG_LEVEL=info
      - URL: http://localhost:3003
 
 3. You can now use prompts from the MCP Prompts server in Claude Desktop by typing "/" in the chat.
+
+## Troubleshooting
+
+### Docker build fails with missing package.json or source files
+- Make sure you are running the build command from the `mcp-prompts-ts` directory.
+- Ensure the Dockerfile copies `package.json` and source files (see Dockerfile examples).
+- If you see `npm error enoent Could not read package.json`, your Dockerfile is missing a `COPY` step for `package.json`.
+
+### Docker run fails with port already in use
+- Make sure no other process is using the port (default 3003).
+- You can change the port mapping with `-p`.
+
+### Health check fails
+- Check logs with `docker compose logs` or `docker logs <container>`.
+- Make sure the server is running and accessible at the expected port.
 
 ## Next Steps
 

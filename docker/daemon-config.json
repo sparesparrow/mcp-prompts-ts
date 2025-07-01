@@ -1,4 +1,6 @@
 {
+  // Docker daemon address pools for custom bridge network management.
+  // Adjust these ranges if you have network conflicts or need to isolate containers.
   "default-address-pools": [
     {
       "base": "172.30.0.0/16",

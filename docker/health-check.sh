@@ -3,8 +3,7 @@
 # Health check script for MCP Prompts Docker containers
 # This script checks the health endpoint using either curl or wget
 
-# Enable debug mode
-set -x
+set -e
 
 # Get the port from the environment or default to 3003
 PORT=${PORT:-3003}
@@ -17,7 +16,6 @@ env | grep -E 'PORT|HOST|STORAGE|NODE_ENV'
 # Check if curl is available
 if command -v curl >/dev/null 2>&1; then
   echo "Using curl for health check..."
-  # Check if the server is responding 
   HEALTH_URL="http://localhost:${PORT}/health"
   HTTP_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" ${HEALTH_URL} || echo "failed")
 
@@ -31,14 +29,14 @@ if command -v curl >/dev/null 2>&1; then
 # If curl is not available, try wget
 elif command -v wget >/dev/null 2>&1; then
   echo "Using wget for health check..."
-  # Perform health check
-  if wget -q --spider --timeout=10 http://localhost:$PORT/health; then
+  HEALTH_URL="http://localhost:${PORT}/health"
+  if wget -q --spider --timeout=10 ${HEALTH_URL}; then
     echo "Health check passed!"
     exit 0
   else
-    echo "Health check failed for http://localhost:$PORT/health"
+    echo "Health check failed for ${HEALTH_URL}"
     # Try one more time with full output for debugging
-    wget --spider -S http://localhost:$PORT/health || true
+    wget --spider -S ${HEALTH_URL} || true
     exit 1
   fi
 else

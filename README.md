@@ -1,6 +1,6 @@
 # MCP Prompts - TypeScript Implementation
 
-This repository will contain the TypeScript implementation of the MCP Prompts server.
+This repository contains the TypeScript implementation of the MCP Prompts server.
 
 ## Usage Examples
 
@@ -24,7 +24,26 @@ docker run -d --name mcp-prompts \
   sparesparrow/mcp-prompts:latest
 ```
 
-### 3. Run with Docker Compose (PostgreSQL storage)
+### 3. Build from source with Docker
+
+If you want to build the Docker image from source, note that the Dockerfiles are located in the `docker/` subdirectory. For example:
+
+- For development:
+  ```bash
+  cd mcp-prompts-ts
+  docker build -f docker/Dockerfile.development -t mcp-prompts:dev .
+  docker run -p 3003:3003 mcp-prompts:dev
+  ```
+- For production:
+  ```bash
+  cd mcp-prompts-ts
+  docker build -f docker/Dockerfile.prod -t mcp-prompts:prod .
+  docker run -p 3003:3003 mcp-prompts:prod
+  ```
+
+### 4. Run with Docker Compose (PostgreSQL storage)
+
+You can use the provided Docker Compose files in `docker/compose/` for advanced setups. Example for PostgreSQL:
 
 Create a `docker-compose.yml`:
 
@@ -54,10 +73,11 @@ volumes:
   pg-data:
 ```
 
-Start services:
+Or use a prepared compose file:
 
 ```bash
-docker compose up -d
+cd mcp-prompts-ts
+docker compose -f docker/compose/docker-compose.development.yml up -d
 ```
 
 Health-check:
@@ -71,6 +91,21 @@ Expect `{ "status": "ok" }`.
 ---
 
 For more configuration options, see `docs/02-configuration.md` or the [Configuration Guide](mcp-prompts/docs/02-configuration.md).
+
+## Troubleshooting
+
+### Docker build fails with missing package.json or source files
+- Make sure you are running the build command from the `mcp-prompts-ts` directory.
+- Ensure the Dockerfile copies `package.json` and source files (see Dockerfile examples).
+- If you see `npm error enoent Could not read package.json`, your Dockerfile is missing a `COPY` step for `package.json`.
+
+### Docker run fails with port already in use
+- Make sure no other process is using the port (default 3003).
+- You can change the port mapping with `-p`.
+
+### Health check fails
+- Check logs with `docker compose logs` or `docker logs <container>`.
+- Make sure the server is running and accessible at the expected port.
 
 ## Configuration
 

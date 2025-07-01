@@ -13,6 +13,15 @@ RUN apk --no-cache add curl wget bash && \
 RUN mkdir -p /app/data/prompts /app/data/backups /app/test-results && \
     chmod -R 777 /app/data /app/test-results
 
+# Copy package files first for better cache
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the source code
+COPY . .
+
 # Environment variables for testing
 ENV NODE_ENV=test \
     STORAGE_TYPE=file \
@@ -20,13 +29,6 @@ ENV NODE_ENV=test \
     BACKUPS_DIR=/app/data/backups \
     LOG_LEVEL=debug \
     TEST_MODE=true
-
-# Copy source code and other necessary files
-COPY . .
-
-# Install dependencies and build the project
-RUN npm install
-RUN npm run build
 
 # Expose port for test reporting
 EXPOSE 9323

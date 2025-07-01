@@ -5,11 +5,14 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy all source code and package files
-COPY . .
+# Copy package files first for better cache
+COPY package*.json ./
 
 # Install all dependencies (including devDependencies for building)
 RUN npm ci
+
+# Copy all source code
+COPY . .
 
 # Build the TypeScript project
 RUN npm run build
@@ -20,11 +23,14 @@ RUN npm run build
 FROM node:20-alpine AS prod
 WORKDIR /app
 
-# Copy production dependencies from the builder stage
+# Copy only production dependencies from the builder stage
 COPY --from=builder /app/node_modules ./node_modules
 
 # Copy the compiled code from the builder stage
 COPY --from=builder /app/dist ./dist
+
+# Copy package.json for runtime (optional, for health or version info)
+COPY package.json ./
 
 # Copy other necessary assets
 COPY docker/health-check.sh /health-check.sh
