@@ -42,8 +42,9 @@
 
 ### Fáze 7: Testování
 - [x] Spustit kompletní test suite
-- [ ] Otestovat integraci s novými balíčky
-- [ ] Validovat Docker image
+- [x] Otestovat integraci s novými balíčky
+- [ ] Aktualizovat cesty v Dockerfile pro build z monorepo rootu
+- [ ] Validovat Docker image po aktualizaci cest
 - [ ] Otestovat produkční deployment
 
 ### Fáze 8: Package Fixes & Stability

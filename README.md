@@ -107,6 +107,62 @@ For more configuration options, see `docs/02-configuration.md` or the [Configura
 - Check logs with `docker compose logs` or `docker logs <container>`.
 - Make sure the server is running and accessible at the expected port.
 
+## Monorepo Docker Build Notes
+
+If you are building the Docker image in a monorepo setup (with `mcp-prompts-ts` and `mcp-prompts-catalog` as sibling directories), you must:
+
+- Run Docker build commands from the monorepo root (not just `mcp-prompts-ts`).
+- Ensure the Docker build context includes both `mcp-prompts-ts` and `mcp-prompts-catalog`.
+- Update your Dockerfile to copy the catalog package:
+  ```dockerfile
+  COPY ../mcp-prompts-catalog ./mcp-prompts-catalog
+  ```
+- If you see errors like `Cannot find module '../../../mcp-prompts-catalog'`, it means the catalog package is missing from the build context.
+
+## Docker Build in Monorepo Context
+
+When building the Docker image from the monorepo root (recommended for multi-repo setups), you must update Dockerfile paths to reference files inside the `mcp-prompts-ts` directory. For example:
+
+- `COPY package.json ./` → `COPY mcp-prompts-ts/package.json ./`
+- `COPY docker/health-check.sh /health-check.sh` → `COPY mcp-prompts-ts/docker/health-check.sh /health-check.sh`
+
+This ensures all required files are available in the build context and resolves errors when copying from outside the context.
+
+## Prompt Management API Examples
+
+### List all prompts
+```bash
+curl http://localhost:3003/prompts
+```
+
+### Add a prompt
+```bash
+curl -X POST http://localhost:3003/api/v1/prompts \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Test Prompt",
+    "content": "This is a test prompt.",
+    "isTemplate": false,
+    "description": "A prompt for testing",
+    "tags": ["test"]
+  }'
+```
+
+### Update a prompt
+```bash
+curl -X PATCH "http://localhost:3003/api/v1/prompts/<id>?version=1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Test Prompt Updated",
+    "content": "This is an updated test prompt.",
+    "description": "Updated description"
+  }'
+```
+
+### Verify prompt in filesystem
+- Prompts are stored as JSON files in `data/prompts/` (e.g., `<id>.v<version>.json`).
+- The index file is `index.json` in the same directory.
+
 ## Configuration
 
 MCP Prompts is configured via environment variables. Here are the most important options:

@@ -76,19 +76,3 @@ volumes:
 networks:
   mcp-network:
     driver: bridge
-
-# Health check test service
-test-runner:
-  build:
-    context: .
-    dockerfile: docker/Dockerfile.testing
-  environment:
-    - NODE_ENV=test
-    - TEST_MODE=true
-    - TEST_DOCKER_HEALTH=true
-  command: npm run test:integration
-  depends_on:
-    mcp-prompts:
-      condition: service_healthy
-  profiles:
-    - health-check
