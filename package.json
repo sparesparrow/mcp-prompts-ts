@@ -67,7 +67,6 @@
     "@elastic/elasticsearch": "^9.0.2",
     "@modelcontextprotocol/sdk": "^1.13.2",
     "@modelcontextprotocol/server-postgres": "0.6.2",
-    "@sparesparrow/mcp-prompts-catalog": "^1.0.0",
     "@sparesparrow/mcp-prompts-contracts": "^1.0.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
@@ -89,6 +88,9 @@
     "uuid": "^11.1.0",
     "ws": "^8.18.3",
     "zod": "^3.25.67"
+  },
+  "optionalDependencies": {
+    "@sparesparrow/mcp-prompts-catalog": "^1.0.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
