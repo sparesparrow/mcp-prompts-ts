@@ -15,16 +15,10 @@ const Ajv = require('ajv');
 import fs from 'fs/promises';
 import path from 'path';
 import { cwd } from 'process';
-import { fileURLToPath } from 'url';
-import { promptSchemas } from '../types/manual-exports.js';
 
 import { FileAdapter } from '../adapters.js';
 import { PromptService } from '../prompt-service.js';
 import { StorageAdapter } from '../adapters';
-
-// resolve __dirname for ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 interface PromptTemplate {
   id: string;

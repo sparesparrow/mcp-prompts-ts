@@ -2,17 +2,10 @@
   "name": "@sparesparrow/mcp-prompts",
   "version": "3.0.5",
   "description": "A standalone server for managing and serving prompts for the Model Context Protocol (MCP)",
-  "main": "dist/cjs/src/index.js",
-  "module": "dist/esm/src/index.js",
+  "main": "dist/cjs/index.js",
   "type": "commonjs",
   "bin": {
-    "mcp-prompts": "dist/cjs/src/index.js"
-  },
-  "exports": {
-    ".": {
-      "import": "./dist/esm/src/index.js",
-      "require": "./dist/cjs/src/index.js"
-    }
+    "mcp-prompts": "dist/cjs/index.js"
   },
   "files": [
     "dist",
@@ -130,6 +123,6 @@
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
     "typedoc": "^0.28.7",
-    "typescript": "^5.4.5"
+    "typescript": "^5.8.3"
   }
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import catalog from '@sparesparrow/mcp-prompts-catalog';
+import catalog from '../../../mcp-prompts-catalog';
 import { execSync } from 'child_process';
 import fs from 'fs/promises';
 import fetch from 'node-fetch';

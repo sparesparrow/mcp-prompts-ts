@@ -358,14 +358,29 @@ export async function startHttpServer(
       if (isNaN(version)) {
         throw new Error('Version parameter is required and must be a number');
       }
-      let validatedData = sanitizeUpdatePromptData(req.body);
-      if ('metadata' in validatedData && (validatedData.metadata === null || typeof validatedData.metadata !== 'object')) {
-        delete (validatedData as any).metadata;
+      let validatedData = promptSchemas.update.parse(req.body);
+      // Omit 'variables' when spreading
+      const { variables, ...rest } = validatedData;
+      let updateData: Omit<UpdatePromptParams, 'id' | 'version'> = { ...rest };
+      if (Array.isArray(variables)) {
+        const allStrings = variables.every(v => typeof v === 'string');
+        const allObjects = variables.every(v => typeof v === 'object' && v !== null && typeof v.name === 'string');
+        if (allStrings) {
+          updateData.variables = variables as string[];
+        } else if (allObjects) {
+          updateData.variables = variables as { name: string }[];
+        } else {
+          updateData.variables = variables.map(v =>
+            typeof v === 'string' ? { name: v } : v
+          ) as { name: string }[];
+        }
+      } else {
+        updateData.variables = undefined;
       }
       const updated = await promptService.updatePrompt(
         req.params.id,
         version,
-        validatedData as Omit<UpdatePromptParams, 'id' | 'version'>
+        updateData
       );
       res.json(updated);
     } catch (error) {
@@ -572,9 +587,27 @@ export async function startHttpServer(
   app.put(
     '/prompts/:id/:version',
     catchAsync(async (req, res) => {
-      const validatedData = promptSchemas.update.parse(req.body);
+      let validatedData = promptSchemas.update.parse(req.body);
+      // Omit 'variables' when spreading
+      const { variables, ...rest } = validatedData;
+      let updateData: Omit<UpdatePromptParams, 'id' | 'version'> = { ...rest };
+      if (Array.isArray(variables)) {
+        const allStrings = variables.every(v => typeof v === 'string');
+        const allObjects = variables.every(v => typeof v === 'object' && v !== null && typeof v.name === 'string');
+        if (allStrings) {
+          updateData.variables = variables as string[];
+        } else if (allObjects) {
+          updateData.variables = variables as { name: string }[];
+        } else {
+          updateData.variables = variables.map(v =>
+            typeof v === 'string' ? { name: v } : v
+          ) as { name: string }[];
+        }
+      } else {
+        updateData.variables = undefined;
+      }
       const version = parseInt(req.params.version, 10);
-      const updated = await promptService.updatePrompt(req.params.id, version, validatedData);
+      const updated = await promptService.updatePrompt(req.params.id, version, updateData);
       res.status(200).json({ success: true, prompt: updated });
     }),
   );
