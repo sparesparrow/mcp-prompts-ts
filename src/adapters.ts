@@ -24,8 +24,7 @@ import {
 import { promptSchemas, workflowSchema } from './schemas.js';
 import { LockError } from './errors.js';
 
-// Helper for atomic file writes
-async function atomicWriteFile(filePath: string, data: string) {
+export async function atomicWriteFile(filePath: string, data: string) {
   const dir = path.dirname(filePath);
   const tempFile = path.join(dir, `${path.basename(filePath)}.${randomUUID()}.tmp`);
   await fsp.writeFile(tempFile, data);

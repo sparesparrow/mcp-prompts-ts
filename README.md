@@ -205,3 +205,187 @@ All variables are validated at startup. If any required variable is missing or i
 - Use the meta-repo for coordination, documentation, and cross-repo issues
 
 For full details and troubleshooting, see [MIGRATION.md](MIGRATION.md).
+
+## JSON-RPC 2.0 API
+
+The MCP Prompts server supports a JSON-RPC 2.0 API at the `/rpc` endpoint. All protocol-relevant actions (prompt management, workflows, tool discovery, consent, etc.) can be accessed via JSON-RPC methods.
+
+### Endpoint
+
+```
+POST /rpc
+Content-Type: application/json
+```
+
+### Example: getCapabilities
+
+Request:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "getCapabilities",
+  "params": {}
+}
+```
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "server": "mcp-prompts",
+    "version": "1.0.0",
+    "features": ["prompts.list", "prompts.get", ...],
+    "methods": ["getCapabilities", "prompts.list", ...],
+    "protocol": "MCP"
+  }
+}
+```
+
+### Example: prompts.list
+
+Request:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "prompts.list",
+  "params": {}
+}
+```
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": []
+}
+```
+
+### Example: prompts.create
+
+Request:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "prompts.create",
+  "params": {
+    "name": "Example",
+    "content": "Hello, {{name}}!",
+    "isTemplate": true,
+    "tags": ["test"]
+  }
+}
+```
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "id": "example-id",
+    "name": "Example",
+    "content": "Hello, {{name}}!",
+    ...
+  }
+}
+```
+
+### Example: tools.list (Tool/Resource Discovery)
+
+Returns a list of available tools/resources dynamically discovered from the prompt catalog. Each tool includes metadata such as id, name, description, variables (arguments), tags, and category.
+
+Request:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "method": "tools.list",
+  "params": {}
+}
+```
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": [
+    {
+      "id": "project-analysis-assistant",
+      "name": "Project Analysis Assistant",
+      "description": "A comprehensive template for analyzing project structure and codebase with filesystem resource integration",
+      "tags": ["development", "project-analysis", "architecture", "resource-enabled", "code-quality"],
+      "variables": ["language", "project_path", "specific_focus", "additional_context"],
+      "metadata": { ... },
+      "category": "general"
+    },
+    ...
+  ]
+}
+```
+
+### Example: tools.invoke (Tool/Resource Invocation)
+
+Invokes a tool by ID, passing arguments as required by the tool's variables. Only template-based tools are currently invokable; workflows and multi-step tools will return a not-implemented error.
+
+Request:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "method": "tools.invoke",
+  "params": {
+    "tool": "project-analysis-assistant",
+    "args": {
+      "language": "TypeScript",
+      "project_path": "src/",
+      "specific_focus": "API design",
+      "additional_context": "Focus on REST endpoints."
+    }
+  }
+}
+```
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "result": {
+    "content": "You are an advanced project analysis assistant examining a TypeScript project. The project is located at @resource://filesystem/src/.\n\n**Project Analysis Instructions:**\n..."
+  }
+}
+```
+
+If the tool is not found or not invokable, an error is returned:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 12,
+  "error": { "code": -32004, "message": "Tool not found" }
+}
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 13,
+  "error": { "code": -32001, "message": "Tool is not a template or cannot be invoked directly" }
+}
+```
+
+**Note:** Tools are dynamically discovered from the prompt catalog. Only template-based tools can currently be invoked; support for workflows and multi-step tools is planned for future releases.
+
+### Error Handling
+All errors are returned in the JSON-RPC error envelope:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "error": { "code": -32601, "message": "Method not found" }
+}
+```
+
+### Automated Test Coverage
+The JSON-RPC API is covered by integration tests in `tests/integration/rpc-endpoint.integration.test.ts`, ensuring protocol compliance and regression protection for all core methods.

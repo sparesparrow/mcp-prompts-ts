@@ -10,6 +10,7 @@ import swaggerUi from 'swagger-ui-express';
 import { z } from 'zod';
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import type { Request, Response, NextFunction } from 'express';
+import catalog from '@sparesparrow/mcp-prompts-catalog';
 
 import type { PromptService } from './prompt-service.js';
 import type { SequenceService } from './sequence-service.js';
@@ -26,6 +27,7 @@ import {
 import type { StorageAdapter } from './types/manual-exports.js';
 import { promptSchemas } from './types/manual-exports.js';
 import { Prompt, CreatePromptParams, UpdatePromptParams } from './interfaces';
+import { atomicWriteFile } from './adapters.js';
 
 // Global error handler middleware (must be at module level for export)
 export const errorHandler: express.ErrorRequestHandler = (err, req, res, next) => {
@@ -93,12 +95,12 @@ function getWorkflowFileName(id: string, version: number) {
   return path.join(WORKFLOW_DIR, `${id}-v${version}.json`);
 }
 
-function saveWorkflowToFile(workflow: any) {
+async function saveWorkflowToFile(workflow: any) {
   ensureWorkflowDir();
   if (typeof workflow.id !== 'string' || typeof workflow.version !== 'number') {
     throw new Error('Workflow must have string id and number version');
   }
-  fs.writeFileSync(
+  await atomicWriteFile(
     getWorkflowFileName(workflow.id, workflow.version),
     JSON.stringify(workflow, null, 2),
   );
@@ -285,6 +287,57 @@ const handleError = (error: any, res: Response) => {
     });
   }
 };
+
+// Add helper for dynamic tool/resource discovery
+function discoverCatalogTools() {
+  const tools = [];
+  const categories = catalog.getCategories();
+  for (const category of categories) {
+    for (const promptName of catalog.listPrompts(category)) {
+      const prompt = catalog.loadPrompt(promptName, category);
+      if (!prompt) continue;
+      // Heuristic: Expose as tool if tagged or has resource/tool metadata
+      const tags = prompt.tags || [];
+      const meta = prompt.metadata || {};
+      if (
+        tags.includes('resource-enabled') ||
+        tags.includes('resource-integration') ||
+        tags.includes('workflow') ||
+        tags.includes('code-review') ||
+        tags.includes('mcp-resources') ||
+        tags.includes('multi-resource') ||
+        tags.includes('integration') ||
+        tags.includes('template-system') ||
+        meta.resourcePatterns ||
+        meta.requires ||
+        meta.recommended_tools
+      ) {
+        tools.push({
+          id: prompt.id,
+          name: prompt.name,
+          description: prompt.description,
+          tags,
+          variables: prompt.variables,
+          metadata: meta,
+          category,
+        });
+      }
+    }
+  }
+  return tools;
+}
+
+// Helper to find a tool by ID
+function findCatalogToolById(id) {
+  const categories = catalog.getCategories();
+  for (const category of categories) {
+    for (const promptName of catalog.listPrompts(category)) {
+      const prompt = catalog.loadPrompt(promptName, category);
+      if (prompt && prompt.id === id) return { prompt, category };
+    }
+  }
+  return null;
+}
 
 /**
  *
@@ -849,6 +902,196 @@ export async function startHttpServer(
       }),
     );
   }
+
+  // JSON-RPC 2.0 Handler
+  // @ts-expect-error Express async handler type mismatch is safe to ignore
+  app.post('/rpc', async (req: Request, res: Response) => {
+    const { jsonrpc, id, method, params } = req.body || {};
+    if (jsonrpc !== '2.0' || typeof id === 'undefined' || typeof method !== 'string') {
+      res.json({
+        jsonrpc: '2.0',
+        id: id ?? null,
+        error: { code: -32600, message: 'Invalid Request' },
+      });
+      return;
+    }
+
+    // Helper to send JSON-RPC error
+    const sendError = (code: number, message: string, data?: any) =>
+      res.json({ jsonrpc: '2.0', id, error: { code, message, data } });
+
+    try {
+      // Dispatcher for supported methods
+      switch (method) {
+        case 'getCapabilities': {
+          res.json({
+            jsonrpc: '2.0',
+            id,
+            result: {
+              server: 'mcp-prompts',
+              version: '1.0.0',
+              features: [
+                'prompts.list',
+                'prompts.get',
+                'prompts.create',
+                'prompts.update',
+                'prompts.delete',
+                'workflows.list',
+                'workflows.execute',
+                'tools.list',
+                'tools.invoke',
+                'consent',
+              ],
+              methods: [
+                'getCapabilities',
+                'prompts.list',
+                'prompts.get',
+                'prompts.create',
+                'prompts.update',
+                'prompts.delete',
+                'workflows.list',
+                'workflows.execute',
+                'tools.list',
+                'tools.invoke',
+                'consent',
+              ],
+              protocol: 'MCP',
+            },
+          });
+          return;
+        }
+        case 'prompts.list': {
+          const { tags, isTemplate, search, limit, offset } = params || {};
+          const prompts = await promptService.listPrompts({ tags, isTemplate, search, limit, offset });
+          res.json({ jsonrpc: '2.0', id, result: prompts });
+          return;
+        }
+        case 'prompts.get': {
+          const { id: promptId, version } = params || {};
+          if (!promptId) return sendError(-32602, 'Missing prompt id');
+          const prompt = await promptService.getPrompt(promptId, version);
+          if (!prompt) return sendError(-32004, 'Prompt not found');
+          res.json({ jsonrpc: '2.0', id, result: prompt });
+          return;
+        }
+        case 'prompts.create': {
+          const data = params || {};
+          const validatedData = sanitizePromptData(data);
+          const prompt = await promptService.createPrompt(validatedData);
+          res.json({ jsonrpc: '2.0', id, result: prompt });
+          return;
+        }
+        case 'prompts.update': {
+          const { id: promptId, version, ...updateData } = params || {};
+          if (!promptId || typeof version !== 'number') return sendError(-32602, 'Missing prompt id or version');
+          let validatedData = promptSchemas.update.parse(updateData);
+          const { variables, metadata, ...rest } = validatedData;
+          let updatePayload: any = { ...rest };
+          // Fix metadata: convert null to undefined
+          if (metadata === null) {
+            updatePayload.metadata = undefined;
+          } else if (metadata !== undefined) {
+            updatePayload.metadata = metadata;
+          }
+          // Fix variables: only assign if string[] or TemplateVariable[] or null/undefined
+          if (Array.isArray(variables)) {
+            const allStrings = variables.every(v => typeof v === 'string');
+            const allObjects = variables.every(v => typeof v === 'object' && v !== null && typeof v.name === 'string');
+            if (allStrings) {
+              updatePayload.variables = variables as string[];
+            } else if (allObjects) {
+              updatePayload.variables = variables as any[];
+            } else {
+              // Mixed array: convert all strings to TemplateVariable objects
+              updatePayload.variables = variables.map(v =>
+                typeof v === 'string' ? { name: v } : v
+              );
+            }
+          } else if (variables === null) {
+            updatePayload.variables = null;
+          } else {
+            updatePayload.variables = undefined;
+          }
+          const updated = await promptService.updatePrompt(promptId, version, updatePayload);
+          res.json({ jsonrpc: '2.0', id, result: updated });
+          return;
+        }
+        case 'prompts.delete': {
+          const { id: promptId, version } = params || {};
+          if (!promptId) return sendError(-32602, 'Missing prompt id');
+          const success = await promptService.deletePrompt(promptId, version);
+          if (!success) return sendError(-32004, 'Prompt not found');
+          res.json({ jsonrpc: '2.0', id, result: { success: true } });
+          return;
+        }
+        case 'workflows.list': {
+          const latestOnly = params?.latestOnly !== false;
+          const workflows = getAllWorkflows(latestOnly);
+          res.json({ jsonrpc: '2.0', id, result: workflows });
+          return;
+        }
+        case 'workflows.execute': {
+          const { id: workflowId, version, context } = params || {};
+          if (!workflowId) return sendError(-32602, 'Missing workflow id');
+          const workflow = loadWorkflowFromFile(workflowId, version);
+          if (!workflow) return sendError(-32004, 'Workflow not found');
+          const executionId = await workflowService.executeWorkflow(workflow, context);
+          res.json({ jsonrpc: '2.0', id, result: { executionId } });
+          return;
+        }
+        case 'tools.list': {
+          // Dynamic discovery from catalog
+          const tools = discoverCatalogTools();
+          res.json({ jsonrpc: '2.0', id, result: tools });
+          return;
+        }
+        case 'tools.invoke': {
+          const { tool: toolId, args } = params || {};
+          if (!toolId) return sendError(-32602, 'Missing tool id');
+          const found = findCatalogToolById(toolId);
+          if (!found) return sendError(-32004, 'Tool not found');
+          const { prompt } = found;
+          if (prompt.isTemplate && prompt.variables) {
+            // Render template with args
+            try {
+              // Simple variable mapping: support both string[] and object[]
+              const variables = {};
+              for (const v of prompt.variables) {
+                const name = typeof v === 'string' ? v : v.name;
+                if (args && args[name] !== undefined) variables[name] = args[name];
+              }
+              // Use Handlebars directly for now (no partials)
+              const Handlebars = require('handlebars');
+              const template = Handlebars.compile(prompt.content);
+              const content = template(variables);
+              res.json({ jsonrpc: '2.0', id, result: { content } });
+            } catch (e) {
+              sendError(-32002, 'Tool invocation failed', { error: e.message });
+            }
+            return;
+          } else {
+            sendError(-32001, 'Tool is not a template or cannot be invoked directly');
+            return;
+          }
+        }
+        case 'consent': {
+          const { userId, action, details } = params || {};
+          if (!userId || !action) return sendError(-32602, 'Missing userId or action');
+          auditLogWorkflowEvent({ userId, workflowId: '', eventType: 'consent', details: { action, ...details } });
+          res.json({ jsonrpc: '2.0', id, result: { success: true } });
+          return;
+        }
+        default:
+          sendError(-32601, 'Method not found');
+          return;
+      }
+    } catch (error: any) {
+      // Log error and return JSON-RPC error
+      console.error('JSON-RPC error:', error);
+      sendError(-32603, error.message || 'Internal error', error.stack);
+      return;
+    }
+  });
 
   // Add this after all other routes, before the error handler
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));

@@ -18,7 +18,8 @@
     "forceConsistentCasingInFileNames": true,
     "importHelpers": true,
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@sparesparrow/mcp-prompts-catalog": ["../mcp-prompts-catalog"]
     }
   },
   "include": ["src/**/*"],
