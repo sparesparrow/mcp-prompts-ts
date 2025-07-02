@@ -13,8 +13,8 @@ import type { Request, Response, NextFunction } from 'express';
 import catalog from '@sparesparrow/mcp-prompts-catalog';
 
 import type { PromptService } from './prompt-service.js';
-import type { SequenceService } from './sequence-service.js';
-import type { WorkflowService } from './workflow-service.js';
+import type { ISequenceApplication } from './sequence-service.js';
+import type { IWorkflowApplication } from './workflow-service.js';
 import { AppError, HttpErrorCode } from './errors.js';
 import {
   auditLogWorkflowEvent,
@@ -28,6 +28,7 @@ import type { StorageAdapter } from './types/manual-exports.js';
 import { promptSchemas } from './types/manual-exports.js';
 import { Prompt, CreatePromptParams, UpdatePromptParams } from './interfaces';
 import { atomicWriteFile } from './adapters.js';
+import type { IPromptRepository, IPromptApplication } from './interfaces.js';
 
 // Global error handler middleware (must be at module level for export)
 export const errorHandler: express.ErrorRequestHandler = (err, req, res, next) => {
@@ -79,10 +80,10 @@ export interface HttpServerConfig {
 }
 
 export interface ServerServices {
-  promptService: PromptService;
-  sequenceService: SequenceService;
-  workflowService: WorkflowService;
-  storageAdapters: StorageAdapter[];
+  promptService: IPromptApplication;
+  sequenceService: ISequenceApplication;
+  workflowService: IWorkflowApplication;
+  storageAdapters: IPromptRepository[];
   elevenLabsService?: any;
 }
 
@@ -386,7 +387,7 @@ export async function startHttpServer(
   app.post('/api/v1/prompts', async (req: Request, res: Response) => {
     try {
       const validatedData = sanitizePromptData(req.body);
-      const prompt = await promptService.createPrompt(validatedData);
+      const prompt = await promptService.addPrompt(validatedData);
       res.status(201).json(prompt);
     } catch (error) {
       handleError(error, res);
@@ -397,7 +398,7 @@ export async function startHttpServer(
   app.post('/api/v1/prompts/bulk', async (req: Request, res: Response) => {
     try {
       const prompts = req.body.map(sanitizePromptData);
-      const results = await promptService.createPromptsBulk(prompts);
+      const results = await Promise.all(prompts.map((p: CreatePromptParams) => promptService.addPrompt(p)));
       res.status(201).json(results);
     } catch (error) {
       handleError(error, res);
@@ -412,28 +413,31 @@ export async function startHttpServer(
         throw new Error('Version parameter is required and must be a number');
       }
       let validatedData = promptSchemas.update.parse(req.body);
-      // Omit 'variables' when spreading
-      const { variables, ...rest } = validatedData;
-      let updateData: Omit<UpdatePromptParams, 'id' | 'version'> = { ...rest };
-      if (Array.isArray(variables)) {
-        const allStrings = variables.every(v => typeof v === 'string');
-        const allObjects = variables.every(v => typeof v === 'object' && v !== null && typeof v.name === 'string');
-        if (allStrings) {
-          updateData.variables = variables as string[];
-        } else if (allObjects) {
-          updateData.variables = variables as { name: string }[];
-        } else {
-          updateData.variables = variables.map(v =>
-            typeof v === 'string' ? { name: v } : v
-          ) as { name: string }[];
-        }
-      } else {
-        updateData.variables = undefined;
+      // Sanitize updateData for metadata, tags, and variables
+      const sanitizedUpdateData = { ...validatedData };
+      if ('metadata' in sanitizedUpdateData && (sanitizedUpdateData.metadata === null || sanitizedUpdateData.metadata === undefined)) {
+        delete sanitizedUpdateData.metadata;
       }
+      if ('tags' in sanitizedUpdateData && (sanitizedUpdateData.tags === null || sanitizedUpdateData.tags === undefined)) {
+        delete sanitizedUpdateData.tags;
+      }
+      if ('variables' in sanitizedUpdateData && (sanitizedUpdateData.variables === null || sanitizedUpdateData.variables === undefined)) {
+        delete sanitizedUpdateData.variables;
+      }
+      // Explicitly construct update object for type safety
+      const updateObj: Partial<Prompt> = {};
+      if (sanitizedUpdateData.name !== undefined && sanitizedUpdateData.name !== null) updateObj.name = sanitizedUpdateData.name;
+      if (sanitizedUpdateData.description !== undefined && sanitizedUpdateData.description !== null) updateObj.description = sanitizedUpdateData.description;
+      if (sanitizedUpdateData.category !== undefined && sanitizedUpdateData.category !== null) updateObj.category = sanitizedUpdateData.category;
+      if (sanitizedUpdateData.content !== undefined && sanitizedUpdateData.content !== null) updateObj.content = sanitizedUpdateData.content;
+      if (sanitizedUpdateData.isTemplate !== undefined && sanitizedUpdateData.isTemplate !== null) updateObj.isTemplate = sanitizedUpdateData.isTemplate;
+      if (sanitizedUpdateData.metadata !== undefined && sanitizedUpdateData.metadata !== null) updateObj.metadata = sanitizedUpdateData.metadata;
+      if (sanitizedUpdateData.tags !== undefined && sanitizedUpdateData.tags !== null) updateObj.tags = sanitizedUpdateData.tags;
+      if (sanitizedUpdateData.variables !== undefined && sanitizedUpdateData.variables !== null) updateObj.variables = sanitizedUpdateData.variables;
       const updated = await promptService.updatePrompt(
         req.params.id,
         version,
-        updateData
+        updateObj
       );
       res.json(updated);
     } catch (error) {
@@ -559,9 +563,8 @@ export async function startHttpServer(
       if (!Array.isArray(ids)) {
         throw new AppError('`ids` must be an array of strings', 400, HttpErrorCode.VALIDATION_ERROR);
       }
-      const results = await services.promptService.deletePromptsBulk(ids);
-      const hasErrors = results.some(r => !r.success);
-      res.status(hasErrors ? 207 : 200).json({ results });
+      const results = await Promise.all(ids.map(id => promptService.deletePrompt(id)));
+      res.status(200).json({ results });
     }),
   );
 
@@ -641,26 +644,29 @@ export async function startHttpServer(
     '/prompts/:id/:version',
     catchAsync(async (req, res) => {
       let validatedData = promptSchemas.update.parse(req.body);
-      // Omit 'variables' when spreading
-      const { variables, ...rest } = validatedData;
-      let updateData: Omit<UpdatePromptParams, 'id' | 'version'> = { ...rest };
-      if (Array.isArray(variables)) {
-        const allStrings = variables.every(v => typeof v === 'string');
-        const allObjects = variables.every(v => typeof v === 'object' && v !== null && typeof v.name === 'string');
-        if (allStrings) {
-          updateData.variables = variables as string[];
-        } else if (allObjects) {
-          updateData.variables = variables as { name: string }[];
-        } else {
-          updateData.variables = variables.map(v =>
-            typeof v === 'string' ? { name: v } : v
-          ) as { name: string }[];
-        }
-      } else {
-        updateData.variables = undefined;
+      // Sanitize updateData for metadata, tags, and variables
+      const sanitizedUpdateData = { ...validatedData };
+      if ('metadata' in sanitizedUpdateData && (sanitizedUpdateData.metadata === null || sanitizedUpdateData.metadata === undefined)) {
+        delete sanitizedUpdateData.metadata;
       }
+      if ('tags' in sanitizedUpdateData && (sanitizedUpdateData.tags === null || sanitizedUpdateData.tags === undefined)) {
+        delete sanitizedUpdateData.tags;
+      }
+      if ('variables' in sanitizedUpdateData && (sanitizedUpdateData.variables === null || sanitizedUpdateData.variables === undefined)) {
+        delete sanitizedUpdateData.variables;
+      }
+      // Explicitly construct update object for type safety
+      const updateObj: Partial<Prompt> = {};
+      if (sanitizedUpdateData.name !== undefined && sanitizedUpdateData.name !== null) updateObj.name = sanitizedUpdateData.name;
+      if (sanitizedUpdateData.description !== undefined && sanitizedUpdateData.description !== null) updateObj.description = sanitizedUpdateData.description;
+      if (sanitizedUpdateData.category !== undefined && sanitizedUpdateData.category !== null) updateObj.category = sanitizedUpdateData.category;
+      if (sanitizedUpdateData.content !== undefined && sanitizedUpdateData.content !== null) updateObj.content = sanitizedUpdateData.content;
+      if (sanitizedUpdateData.isTemplate !== undefined && sanitizedUpdateData.isTemplate !== null) updateObj.isTemplate = sanitizedUpdateData.isTemplate;
+      if (sanitizedUpdateData.metadata !== undefined && sanitizedUpdateData.metadata !== null) updateObj.metadata = sanitizedUpdateData.metadata;
+      if (sanitizedUpdateData.tags !== undefined && sanitizedUpdateData.tags !== null) updateObj.tags = sanitizedUpdateData.tags;
+      if (sanitizedUpdateData.variables !== undefined && sanitizedUpdateData.variables !== null) updateObj.variables = sanitizedUpdateData.variables;
       const version = parseInt(req.params.version, 10);
-      const updated = await promptService.updatePrompt(req.params.id, version, updateData);
+      const updated = await promptService.updatePrompt(req.params.id, version, updateObj);
       res.status(200).json({ success: true, prompt: updated });
     }),
   );
@@ -977,42 +983,35 @@ export async function startHttpServer(
         case 'prompts.create': {
           const data = params || {};
           const validatedData = sanitizePromptData(data);
-          const prompt = await promptService.createPrompt(validatedData);
+          const prompt = await promptService.addPrompt(validatedData);
           res.json({ jsonrpc: '2.0', id, result: prompt });
           return;
         }
         case 'prompts.update': {
           const { id: promptId, version, ...updateData } = params || {};
           if (!promptId || typeof version !== 'number') return sendError(-32602, 'Missing prompt id or version');
-          let validatedData = promptSchemas.update.parse(updateData);
-          const { variables, metadata, ...rest } = validatedData;
-          let updatePayload: any = { ...rest };
-          // Fix metadata: convert null to undefined
-          if (metadata === null) {
-            updatePayload.metadata = undefined;
-          } else if (metadata !== undefined) {
-            updatePayload.metadata = metadata;
+          // Sanitize updateData for metadata, tags, and variables
+          const sanitizedUpdateData = { ...updateData };
+          if ('metadata' in sanitizedUpdateData && (sanitizedUpdateData.metadata === null || sanitizedUpdateData.metadata === undefined)) {
+            delete sanitizedUpdateData.metadata;
           }
-          // Fix variables: only assign if string[] or TemplateVariable[] or null/undefined
-          if (Array.isArray(variables)) {
-            const allStrings = variables.every(v => typeof v === 'string');
-            const allObjects = variables.every(v => typeof v === 'object' && v !== null && typeof v.name === 'string');
-            if (allStrings) {
-              updatePayload.variables = variables as string[];
-            } else if (allObjects) {
-              updatePayload.variables = variables as any[];
-            } else {
-              // Mixed array: convert all strings to TemplateVariable objects
-              updatePayload.variables = variables.map(v =>
-                typeof v === 'string' ? { name: v } : v
-              );
-            }
-          } else if (variables === null) {
-            updatePayload.variables = null;
-          } else {
-            updatePayload.variables = undefined;
+          if ('tags' in sanitizedUpdateData && (sanitizedUpdateData.tags === null || sanitizedUpdateData.tags === undefined)) {
+            delete sanitizedUpdateData.tags;
           }
-          const updated = await promptService.updatePrompt(promptId, version, updatePayload);
+          if ('variables' in sanitizedUpdateData && (sanitizedUpdateData.variables === null || sanitizedUpdateData.variables === undefined)) {
+            delete sanitizedUpdateData.variables;
+          }
+          // Explicitly construct update object for type safety
+          const updateObj: Partial<Prompt> = {};
+          if (sanitizedUpdateData.name !== undefined && sanitizedUpdateData.name !== null) updateObj.name = sanitizedUpdateData.name;
+          if (sanitizedUpdateData.description !== undefined && sanitizedUpdateData.description !== null) updateObj.description = sanitizedUpdateData.description;
+          if (sanitizedUpdateData.category !== undefined && sanitizedUpdateData.category !== null) updateObj.category = sanitizedUpdateData.category;
+          if (sanitizedUpdateData.content !== undefined && sanitizedUpdateData.content !== null) updateObj.content = sanitizedUpdateData.content;
+          if (sanitizedUpdateData.isTemplate !== undefined && sanitizedUpdateData.isTemplate !== null) updateObj.isTemplate = sanitizedUpdateData.isTemplate;
+          if (sanitizedUpdateData.metadata !== undefined && sanitizedUpdateData.metadata !== null) updateObj.metadata = sanitizedUpdateData.metadata;
+          if (sanitizedUpdateData.tags !== undefined && sanitizedUpdateData.tags !== null) updateObj.tags = sanitizedUpdateData.tags;
+          if (sanitizedUpdateData.variables !== undefined && sanitizedUpdateData.variables !== null) updateObj.variables = sanitizedUpdateData.variables;
+          const updated = await promptService.updatePrompt(promptId, version, updateObj);
           res.json({ jsonrpc: '2.0', id, result: updated });
           return;
         }

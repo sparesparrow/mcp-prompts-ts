@@ -1,16 +1,18 @@
 import { fail } from 'assert';
 import { mock } from 'jest-mock-extended';
-import type { StorageAdapter } from '../../src/interfaces.js';
+import type { IPromptRepository, IPromptApplication, ITemplatingEngine } from '../../src/interfaces.js';
 import { PromptService } from '../../src/prompt-service.js';
 import { AppError } from '../../src/errors.js';
 
 describe('PromptService', () => {
   let service: PromptService;
-  let mockAdapter: ReturnType<typeof mock<StorageAdapter>>;
+  let mockAdapter: ReturnType<typeof mock<IPromptRepository>>;
+  let mockTemplating: ITemplatingEngine;
 
   beforeEach(() => {
-    mockAdapter = mock<StorageAdapter>();
-    service = new PromptService(mockAdapter);
+    mockAdapter = mock<IPromptRepository>();
+    mockTemplating = { render: jest.fn((template, variables) => template) };
+    service = new PromptService(mockAdapter, mockTemplating);
   });
 
   it('should create and retrieve a prompt', async () => {

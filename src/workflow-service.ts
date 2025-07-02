@@ -6,7 +6,7 @@ import { promisify } from 'util';
 import type { z } from 'zod';
 
 import { AppError, HttpErrorCode } from './errors.js';
-import type { StorageAdapter, WorkflowExecutionState } from './interfaces.js';
+import type { IPromptRepository, IPromptApplication, WorkflowExecutionState } from './interfaces.js';
 import type { PromptService } from './prompt-service.js';
 import { workflowSchema } from './schemas.js';
 import { getSseManager } from './sse.js';
@@ -34,29 +34,11 @@ export interface RunWorkflowResult {
 }
 
 /**
- * Service for parsing, validating, and orchestrating workflows
+ * Application port for parsing, validating, and orchestrating workflows
  */
-export interface WorkflowService {
-  /**
-   * Parse and validate a workflow object
-   * @param data The workflow definition (object)
-   * @returns The parsed Workflow object
-   * @throws {Error} If validation fails
-   */
+export interface IWorkflowApplication {
   parseWorkflow(data: unknown): Workflow;
-
-  /**
-   * Validate a workflow object (returns true/false)
-   * @param data The workflow definition (object)
-   * @returns True if valid, false otherwise
-   */
   validateWorkflow(data: unknown): boolean;
-
-  /**
-   * Run a workflow (MVP: stub implementation)
-   * @param workflow The workflow to run
-   * @returns Result of the workflow run
-   */
   runWorkflow(workflow: Workflow, initialContext?: WorkflowContext): Promise<RunWorkflowResult>;
   resumeWorkflow(executionId: string, input: unknown): Promise<RunWorkflowResult>;
   executeWorkflow(workflow: any, context?: any): Promise<any>;
@@ -65,11 +47,20 @@ export interface WorkflowService {
   cancelWorkflow(executionId: string): Promise<void>;
 }
 
-export class WorkflowServiceImpl implements WorkflowService {
-  private storageAdapter: StorageAdapter;
-  private promptService: PromptService;
+/**
+ * Repository port for workflow state persistence
+ */
+export interface IWorkflowRepository {
+  saveWorkflowState(state: WorkflowExecutionState): Promise<void>;
+  getWorkflowState(executionId: string): Promise<WorkflowExecutionState | null>;
+  listWorkflowStates(workflowId: string): Promise<WorkflowExecutionState[]>;
+}
 
-  public constructor(storageAdapter: StorageAdapter, promptService: PromptService) {
+export class WorkflowApplication implements IWorkflowApplication {
+  private storageAdapter: IWorkflowRepository;
+  private promptService: IPromptApplication;
+
+  public constructor(storageAdapter: IWorkflowRepository, promptService: IPromptApplication) {
     this.storageAdapter = storageAdapter;
     this.promptService = promptService;
   }
@@ -508,12 +499,12 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
  * StepRunner for 'prompt' steps
  */
 export class PromptRunner implements StepRunner {
-  private promptService: PromptService;
+  private promptService: IPromptApplication;
 
   /**
    * @param promptService Instance of PromptService to use for prompt operations
    */
-  public constructor(promptService: PromptService) {
+  public constructor(promptService: IPromptApplication) {
     this.promptService = promptService;
   }
 

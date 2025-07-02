@@ -1,27 +1,24 @@
 {
+  "files": [],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/adapters-file" },
+    { "path": "./packages/adapters-memory" },
+    { "path": "./apps/server" }
+  ],
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "ESNext",
-    "lib": ["ES2020"],
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
+    "composite": true,
     "strict": true,
-    "moduleResolution": "node",
-    "baseUrl": "./",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
     "esModuleInterop": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "importHelpers": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@sparesparrow/mcp-prompts-catalog": ["../mcp-prompts-catalog"]
+      "@core/*": ["packages/core/src/*"],
+      "@adapters/*": ["packages/*/src/*"]
     }
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+  }
 }

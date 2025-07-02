@@ -12,6 +12,9 @@ import type {
   TemplateVariable,
   UpdatePromptParams,
   TemplateFormatOptions,
+  IPromptRepository,
+  IPromptApplication,
+  ITemplatingEngine,
 } from './interfaces.js';
 import * as Prompts from './prompts.js';
 import { DuplicateError, AppError, HttpErrorCode, ValidationError, NotFoundError } from './errors.js';
@@ -49,12 +52,21 @@ function validateTemplateVariables(prompt: Pick<Prompt, 'content' | 'isTemplate'
   }
 }
 
-export class PromptService {
-  private storage: StorageAdapter;
+function sanitizePromptMetadata<T extends { metadata?: any }>(prompt: T): T {
+  if ('metadata' in prompt && prompt.metadata === null) {
+    return { ...prompt, metadata: undefined };
+  }
+  return prompt;
+}
+
+export class PromptService implements IPromptApplication {
+  private storage: IPromptRepository;
+  private templatingEngine: ITemplatingEngine;
   private promptCache = new Map<string, Prompt>();
 
-  public constructor(storage: StorageAdapter) {
+  public constructor(storage: IPromptRepository, templatingEngine: ITemplatingEngine) {
     this.storage = storage;
+    this.templatingEngine = templatingEngine;
     this.initializeTemplateEngine();
   }
 
@@ -85,26 +97,29 @@ export class PromptService {
    * If no ID is provided, a new one will be generated from the name.
    */
   public async createPrompt(promptData: CreatePromptParams): Promise<Prompt> {
-    const data: Prompt = {
+    const base: Omit<Prompt, 'metadata'> = {
       id: promptData.id ?? this.generateId(promptData.name),
       name: promptData.name,
       content: promptData.content,
       isTemplate: Boolean(promptData.isTemplate),
       description: promptData.description,
       category: promptData.category,
-      metadata: promptData.metadata,
       tags: promptData.tags,
       variables: promptData.variables,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       version: 1
     };
+    const data: Prompt =
+      promptData.metadata !== null && promptData.metadata !== undefined
+        ? { ...base, metadata: promptData.metadata }
+        : base;
     if (!data.name || !data.content) {
       throw new Error('Name and content are required fields');
     }
     const prompt = await this.storage.savePrompt(data);
     await this.invalidatePromptCache(prompt.id);
-    return prompt;
+    return sanitizePromptMetadata(prompt);
   }
 
   private generateId(name: string): string {
@@ -122,7 +137,7 @@ export class PromptService {
   public async getPrompt(id: string, version?: number): Promise<Prompt | null> {
     const cacheKey = version ? `${id}:v${version}` : `${id}:latest`;
     if (this.promptCache.has(cacheKey)) {
-      return this.promptCache.get(cacheKey)!;
+      return sanitizePromptMetadata(this.promptCache.get(cacheKey)!);
     }
 
     const prompt = await this.storage.getPrompt(id, version);
@@ -132,8 +147,9 @@ export class PromptService {
       if (!version) {
         this.promptCache.set(`${id}:v${prompt.version}`, prompt);
       }
+      return sanitizePromptMetadata(prompt);
     }
-    return prompt;
+    return null;
   }
 
   /**
@@ -152,14 +168,20 @@ export class PromptService {
       throw new NotFoundError(`Prompt not found: ${id} v${version}`);
     }
 
-    // Merge existing data with new data
-    const updatedPromptData: Prompt = {
-      ...existingPrompt, // Base with latest prompt data
-      ...args, // Apply updates
-      id, // Ensure ID is not changed
-      version, // Keep the same version for update
-      updatedAt: new Date().toISOString(), // Set new update date
+    const base: Omit<Prompt, 'metadata'> = {
+      ...existingPrompt,
+      ...args,
+      id,
+      version,
+      updatedAt: new Date().toISOString(),
     };
+    let updatedPromptData: Prompt;
+    if ('metadata' in args && args.metadata !== null && args.metadata !== undefined) {
+      updatedPromptData = { ...base, metadata: args.metadata };
+    } else {
+      const { metadata, ...rest } = base;
+      updatedPromptData = rest as Prompt;
+    }
 
     validateTemplateVariables({
       content: updatedPromptData.content,
@@ -169,7 +191,7 @@ export class PromptService {
 
     const result = await this.storage.updatePrompt(id, version, updatedPromptData);
     await this.invalidatePromptCache(id);
-    return result;
+    return sanitizePromptMetadata(result);
   }
 
   /**
@@ -187,7 +209,8 @@ export class PromptService {
    * List prompts (latest version only by default, or all versions if specified).
    */
   public async listPrompts(args: ListPromptsOptions, allVersions = false): Promise<Prompt[]> {
-    return this.storage.listPrompts(args, allVersions);
+    const prompts = await this.storage.listPrompts(args, allVersions);
+    return prompts.map(sanitizePromptMetadata);
   }
 
   /**
@@ -409,10 +432,11 @@ export class PromptService {
 
   // Alias for interface compatibility
   public async addPrompt(data: Partial<Prompt>): Promise<Prompt> {
-    return this.createPrompt(data as any);
+    const prompt = await this.createPrompt(data as CreatePromptParams);
+    return sanitizePromptMetadata(prompt);
   }
 
-  public getStorage(): StorageAdapter {
+  public getStorage(): IPromptRepository {
     return this.storage;
   }
 

@@ -212,32 +212,17 @@ export interface ListPromptsOptions {
 }
 
 /**
- * Base storage adapter interface
+ * Base storage adapter interface (renamed to IPromptRepository)
  */
-export interface StorageAdapter {
+export interface IPromptRepository {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   isConnected(): boolean | Promise<boolean>;
   savePrompt(prompt: Prompt): Promise<Prompt>;
-  /**
-   * Get a prompt by ID and version. If version is omitted, returns the latest version.
-   */
   getPrompt(id: string, version?: number): Promise<Prompt | null>;
-  /**
-   * List all versions for a prompt ID (sorted ascending).
-   */
   listPromptVersions(id: string): Promise<number[]>;
-  /**
-   * Update a specific version of a prompt. If version is omitted, updates the latest.
-   */
   updatePrompt(id: string, version: number, prompt: Partial<Prompt>): Promise<Prompt>;
-  /**
-   * Delete a specific version of a prompt. If version is omitted, deletes all versions.
-   */
   deletePrompt(id: string, version?: number): Promise<boolean>;
-  /**
-   * List prompts (latest version only by default).
-   */
   listPrompts(options?: ListPromptsOptions, allVersions?: boolean): Promise<Prompt[]>;
   clearAll?(): Promise<void>;
   backup?(): Promise<string>;
@@ -247,8 +232,6 @@ export interface StorageAdapter {
   saveSequence(sequence: PromptSequence): Promise<PromptSequence>;
   deleteSequence(id: string): Promise<void>;
   healthCheck?(): Promise<boolean>;
-
-  // Workflow State Management
   saveWorkflowState(state: WorkflowExecutionState): Promise<void>;
   getWorkflowState(executionId: string): Promise<WorkflowExecutionState | null>;
   listWorkflowStates(workflowId: string): Promise<WorkflowExecutionState[]>;
@@ -281,7 +264,7 @@ export interface ApplyTemplateResult {
   missingVariables?: string[];
 }
 
-export interface PromptService {
+export interface IPromptApplication {
   getPrompt(id: string, version?: number): Promise<Prompt | null>;
   addPrompt(data: Partial<Prompt>): Promise<Prompt>;
   updatePrompt(id: string, version: number, data: Partial<Prompt>): Promise<Prompt>;
@@ -547,4 +530,17 @@ export interface AudioGenerationResult {
     hit: boolean;
     path?: string;
   };
+}
+
+export interface ITemplatingEngine {
+  render(template: string, variables: Record<string, string>): string;
+}
+
+/**
+ * Repository port for sequence persistence
+ */
+export interface ISequenceRepository {
+  getSequence(id: string): Promise<PromptSequence | null>;
+  saveSequence(sequence: PromptSequence): Promise<PromptSequence>;
+  deleteSequence(id: string): Promise<void>;
 }

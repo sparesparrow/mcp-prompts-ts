@@ -13,8 +13,9 @@ import { loadConfig } from './config.js';
 import { ElevenLabsService } from './elevenlabs-service.js';
 import { startHttpServer } from './http-server.js';
 import { PromptService } from './prompt-service.js';
-import { SequenceServiceImpl } from './sequence-service.js';
-import { WorkflowServiceImpl } from './workflow-service.js';
+import { SequenceApplication, ISequenceRepository } from './sequence-service.js';
+import { WorkflowApplication } from './workflow-service.js';
+import { defaultTemplatingEngine } from './utils.js';
 
 /**
  *
@@ -66,9 +67,9 @@ async function main() {
   const storageAdapter = adapterFactory(config, logger);
   await storageAdapter.connect();
 
-  const promptService = new PromptService(storageAdapter);
-  const sequenceService = new SequenceServiceImpl(storageAdapter);
-  const workflowService = new WorkflowServiceImpl(storageAdapter, promptService);
+  const promptService = new PromptService(storageAdapter, defaultTemplatingEngine);
+  const sequenceService = new SequenceApplication(storageAdapter as ISequenceRepository);
+  const workflowService = new WorkflowApplication(storageAdapter, promptService);
   const elevenLabsService = new ElevenLabsService({
     apiKey: env.ELEVENLABS_API_KEY || '',
     cacheDir: env.ELEVENLABS_CACHE_DIR,

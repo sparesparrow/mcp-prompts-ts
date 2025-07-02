@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { Prompt, PromptSequence, StorageAdapter } from './types/manual-exports.js';
+import type { Prompt, PromptSequence } from './types/manual-exports.js';
 
 import { PromptService } from './prompt-service.js';
 
@@ -9,9 +9,9 @@ export interface GetSequenceWithPromptsResult {
 }
 
 /**
- * Service for managing prompt sequences
+ * Application port for managing prompt sequences
  */
-export interface SequenceService {
+export interface ISequenceApplication {
   /**
    * Get a sequence by ID, including all its prompts
    * @param id The ID of the sequence
@@ -48,10 +48,19 @@ export interface SequenceService {
   executeSequence(id: string, variables?: Record<string, any>): Promise<any>;
 }
 
-export class SequenceServiceImpl implements SequenceService {
-  private storage: StorageAdapter;
+/**
+ * Repository port for sequence persistence
+ */
+export interface ISequenceRepository {
+  getSequence(id: string): Promise<PromptSequence | null>;
+  saveSequence(sequence: PromptSequence): Promise<PromptSequence>;
+  deleteSequence(id: string): Promise<void>;
+}
 
-  public constructor(storage: StorageAdapter) {
+export class SequenceApplication implements ISequenceApplication {
+  private storage: ISequenceRepository;
+
+  public constructor(storage: ISequenceRepository) {
     this.storage = storage;
   }
 
@@ -62,7 +71,7 @@ export class SequenceServiceImpl implements SequenceService {
     }
 
     const prompts = await Promise.all(
-      sequence.promptIds.map((promptId: string) => this.storage.getPrompt(promptId)),
+      sequence.promptIds.map((promptId: string) => (this.storage as any).getPrompt(promptId)),
     );
 
     const foundPrompts = prompts.filter((p: Prompt | null): p is Prompt => p !== null);

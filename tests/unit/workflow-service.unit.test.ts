@@ -9,6 +9,7 @@ import {
   type Workflow,
 } from '../../src/workflow-service.js';
 import type { Prompt, ListPromptsOptions, TemplateVariables, ApplyTemplateResult } from '../../src/interfaces.js';
+import type { IPromptRepository, IPromptApplication } from '../../src/interfaces.js';
 
 // Mock StepRunners for stateless tests
 const mockStatelessPromptRunner = {
@@ -52,7 +53,7 @@ const mockStorageAdapter: any = {
 };
 
 const mockPromptService: any = {
-  storage: {} as StorageAdapter,
+  storage: {} as IPromptRepository,
   promptCache: new Map(),
   initializeTemplateEngine: jest.fn(),
   initialize: jest.fn(),

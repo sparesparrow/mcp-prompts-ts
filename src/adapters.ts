@@ -18,7 +18,9 @@ import {
   type McpConfig,
   type Prompt,
   type PromptSequence,
-  type StorageAdapter,
+  type IPromptRepository,
+  type ISequenceRepository,
+  type IWorkflowRepository,
   type WorkflowExecutionState,
 } from './interfaces.js';
 import { promptSchemas, workflowSchema } from './schemas.js';
@@ -34,7 +36,7 @@ export async function atomicWriteFile(filePath: string, data: string) {
   await fsp.rename(tempFile, filePath);
 }
 
-export function adapterFactory(config: McpConfig, logger: pino.Logger): StorageAdapter {
+export function adapterFactory(config: McpConfig, logger: pino.Logger): IPromptRepository {
   const { storage } = config;
 
   switch (storage.type) {
@@ -60,7 +62,7 @@ export function adapterFactory(config: McpConfig, logger: pino.Logger): StorageA
   }
 }
 
-export type { StorageAdapter };
+export type { IPromptRepository };
 
 export class ValidationError extends Error {
   public issues: z.ZodIssue[];
@@ -76,7 +78,7 @@ export class ValidationError extends Error {
  * FileAdapter Implementation
  * Stores prompts as individual JSON files in a directory
  */
-export class FileAdapter implements StorageAdapter {
+export class FileAdapter implements IPromptRepository, ISequenceRepository, IWorkflowRepository {
   private promptsDir: string;
   private sequencesDir: string;
   private workflowStatesDir: string;
@@ -250,7 +252,7 @@ export class FileAdapter implements StorageAdapter {
         tags: promptWithDefaults.tags,
       });
 
-      return promptWithDefaults as Prompt;
+      return sanitizePromptMetadata(promptWithDefaults) as Prompt;
     });
   }
 
@@ -268,7 +270,7 @@ export class FileAdapter implements StorageAdapter {
     try {
       const content = await fsp.readFile(this.getPromptFileName(id, versionToFetch), 'utf-8');
       const prompt: Prompt = JSON.parse(content);
-      return promptSchemas.full.parse(prompt) as Prompt;
+      return sanitizePromptMetadata(promptSchemas.full.parse(prompt) as Prompt);
     } catch (error: unknown) {
       if (error instanceof z.ZodError) {
         console.warn(`Validation failed for prompt ${id} v${versionToFetch}: ${error.message}`);
@@ -330,7 +332,7 @@ export class FileAdapter implements StorageAdapter {
         });
       }
 
-      return updated;
+      return sanitizePromptMetadata(updated);
     });
   }
 
@@ -463,7 +465,7 @@ export class FileAdapter implements StorageAdapter {
         return 0;
       });
     }
-    return prompts;
+    return prompts.map(p => sanitizePromptMetadata(p));
   }
 
   public async getSequence(id: string): Promise<PromptSequence | null> {
@@ -544,7 +546,7 @@ export class FileAdapter implements StorageAdapter {
  * MemoryAdapter Implementation
  * In-memory storage for prompts, useful for testing and development
  */
-export class MemoryAdapter implements StorageAdapter {
+export class MemoryAdapter implements IPromptRepository, ISequenceRepository, IWorkflowRepository {
   private prompts = new Map<string, Map<number, Prompt>>();
   private sequences = new Map<string, PromptSequence>();
   private workflowStates = new Map<string, WorkflowExecutionState>();
@@ -659,7 +661,7 @@ export class MemoryAdapter implements StorageAdapter {
       this.prompts.set(promptData.id, versions);
     }
     versions.set(promptData.version as number, promptData);
-    return promptData;
+    return sanitizePromptMetadata(promptData);
   }
 
   public async updatePrompt(
@@ -683,7 +685,7 @@ export class MemoryAdapter implements StorageAdapter {
     const promptVersions = this.prompts.get(id);
     promptVersions?.set(version, updatedPrompt);
 
-    return updatedPrompt;
+    return sanitizePromptMetadata(updatedPrompt);
   }
 
   public async deletePrompt(id: string, version?: number): Promise<boolean> {
@@ -749,7 +751,7 @@ export class MemoryAdapter implements StorageAdapter {
  * PostgresAdapter Implementation
  * Stores prompts in a PostgreSQL database
  */
-export class PostgresAdapter implements StorageAdapter {
+export class PostgresAdapter implements IPromptRepository, ISequenceRepository, IWorkflowRepository {
   private pool: pg.Pool;
   private connected = false;
   private config: pg.PoolConfig;
@@ -891,7 +893,7 @@ export class PostgresAdapter implements StorageAdapter {
 
       await client.query('COMMIT');
 
-      return this.getPromptById(promptId);
+      return sanitizePromptMetadata(await this.getPromptById(promptId));
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -906,7 +908,7 @@ export class PostgresAdapter implements StorageAdapter {
     const tags = await this.getTagsForPrompt(p.id);
     const variables = await this.getVariablesForPrompt(p.id);
 
-    return {
+    return sanitizePromptMetadata({
       category: p.category,
       content: p.content,
       createdAt: p.created_at,
@@ -919,7 +921,7 @@ export class PostgresAdapter implements StorageAdapter {
       updatedAt: p.updated_at,
       variables,
       version: p.version,
-    };
+    });
   }
 
   public async getPrompt(idOrName: string, version?: number): Promise<Prompt | null> {
@@ -943,7 +945,7 @@ export class PostgresAdapter implements StorageAdapter {
       return null;
     }
 
-    return this.getPromptById(res.rows[0].id);
+    return sanitizePromptMetadata(await this.getPromptById(res.rows[0].id));
   }
 
   public async updatePrompt(id: string, version: number, prompt: Partial<Prompt>): Promise<Prompt> {
@@ -1002,7 +1004,7 @@ export class PostgresAdapter implements StorageAdapter {
       }
 
       await client.query('COMMIT');
-      return this.getPromptById(promptId);
+      return sanitizePromptMetadata(await this.getPromptById(promptId));
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -1214,4 +1216,11 @@ export class PostgresAdapter implements StorageAdapter {
       history: row.history,
     }));
   }
+}
+
+function sanitizePromptMetadata<T extends { metadata?: any }>(prompt: T): T {
+  if ('metadata' in prompt && prompt.metadata === null) {
+    return { ...prompt, metadata: undefined };
+  }
+  return prompt;
 }

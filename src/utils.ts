@@ -1,5 +1,6 @@
 import { Redis } from 'ioredis';
 import Handlebars from 'handlebars';
+import type { ITemplatingEngine } from './interfaces.js';
 
 import { config } from './config.js';
 
@@ -109,3 +110,12 @@ export const templateHelpers: Record<string, Handlebars.HelperDelegate> = {
   /** Divides a by b. */
   divide: (a: unknown, b: unknown) => Number(b) !== 0 ? Number(a) / Number(b) : '',
 };
+
+export class HandlebarsTemplatingEngine implements ITemplatingEngine {
+  render(template: string, variables: Record<string, string>): string {
+    const compiled = Handlebars.compile(template);
+    return compiled(variables);
+  }
+}
+
+export const defaultTemplatingEngine = new HandlebarsTemplatingEngine();

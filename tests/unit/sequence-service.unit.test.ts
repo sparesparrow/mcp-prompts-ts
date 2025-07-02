@@ -1,14 +1,14 @@
 import { MemoryAdapter } from '../../src/adapters.js';
-import { SequenceServiceImpl } from '../../src/sequence-service.js';
+import { SequenceApplication, ISequenceRepository } from '../../src/sequence-service.js';
 
 describe('SequenceService', () => {
-  let storage: MemoryAdapter;
-  let service: SequenceServiceImpl;
+  let storage: ISequenceRepository;
+  let service: SequenceApplication;
 
   beforeEach(async () => {
     storage = new MemoryAdapter();
-    await storage.connect();
-    service = new SequenceServiceImpl(storage);
+    await (storage as any).connect();
+    service = new SequenceApplication(storage);
   });
 
   it('should create and retrieve a sequence (happy path)', async () => {
