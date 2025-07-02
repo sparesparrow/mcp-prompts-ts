@@ -18,7 +18,8 @@
     "baseUrl": ".",
     "paths": {
       "@core/*": ["packages/core/src/*"],
-      "@adapters/*": ["packages/*/src/*"]
+      "@adapters-file/*": ["packages/adapters-file/src/*"],
+      "@adapters-memory/*": ["packages/adapters-memory/src/*"]
     }
   }
 }
