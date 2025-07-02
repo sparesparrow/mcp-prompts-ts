@@ -328,7 +328,7 @@ function discoverCatalogTools() {
 }
 
 // Helper to find a tool by ID
-function findCatalogToolById(id) {
+function findCatalogToolById(id: string) {
   const categories = catalog.getCategories();
   for (const category of categories) {
     for (const promptName of catalog.listPrompts(category)) {
@@ -1055,10 +1055,10 @@ export async function startHttpServer(
             // Render template with args
             try {
               // Simple variable mapping: support both string[] and object[]
-              const variables = {};
+              const variables: Record<string, any> = {};
               for (const v of prompt.variables) {
                 const name = typeof v === 'string' ? v : v.name;
-                if (args && args[name] !== undefined) variables[name] = args[name];
+                if (args && (args as Record<string, any>)[name] !== undefined) variables[name] = (args as Record<string, any>)[name];
               }
               // Use Handlebars directly for now (no partials)
               const Handlebars = require('handlebars');
@@ -1066,7 +1066,8 @@ export async function startHttpServer(
               const content = template(variables);
               res.json({ jsonrpc: '2.0', id, result: { content } });
             } catch (e) {
-              sendError(-32002, 'Tool invocation failed', { error: e.message });
+              const errorMessage = e instanceof Error ? e.message : String(e);
+              sendError(-32002, 'Tool invocation failed', { error: errorMessage });
             }
             return;
           } else {
