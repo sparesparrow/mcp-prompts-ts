@@ -14,7 +14,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/sparesparrow/mcp-prompts.git"
+    "url": "git+https://github.com/sparesparrow/mcp-prompts.git"
   },
   "homepage": "https://github.com/sparesparrow/mcp-prompts#readme",
   "bugs": {
@@ -123,5 +123,10 @@
     "ts-node": "^10.9.2",
     "typedoc": "^0.28.7",
     "typescript": "^5.8.3"
-  }
+  },
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "types": "./dist/cjs/index.d.ts"
 }
